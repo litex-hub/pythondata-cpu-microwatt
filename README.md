@@ -16,9 +16,12 @@ with open(os.path.join(litex.data.cpu.microwatt.location, my_data_file)) as f:
     print(f.read())
 ```
 
+
 The data files come from https://github.com/antonblanchard/microwatt
 and are imported using `git subtrees` to the directory
 [litex/data/cpu/microwatt/vhdl](litex/data/cpu/microwatt/vhdl].
+
+
 
 ## Installing
 
