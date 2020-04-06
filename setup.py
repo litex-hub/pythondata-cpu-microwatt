@@ -16,7 +16,7 @@ setuptools.setup(
     url="https://github.com/litex-hub/litex-data-cpu-microwatt",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Creative Commons Attribution-ShareAlike 4.0 License (CC-BY-SA 4.0)",
+        "License :: OSI Approved",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.5',
