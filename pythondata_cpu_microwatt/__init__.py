@@ -4,42 +4,42 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post479"
-version_tuple = (0, 0, 479)
+version_str = "0.0.post485"
+version_tuple = (0, 0, 485)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post479")
+    pversion = V("0.0.post485")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post431"
-data_version_tuple = (0, 0, 431)
+data_version_str = "0.0.post436"
+data_version_tuple = (0, 0, 436)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post431")
+    pdata_version = V("0.0.post436")
 except ImportError:
     pass
-data_git_hash = "d3291dbdf01960e900e1d863f02f35a45a611454"
-data_git_describe = "v0.0-431-gd3291db"
+data_git_hash = "e8a55f900fdce81fc62d261a197eb028f38b211f"
+data_git_describe = "v0.0-436-ge8a55f9"
 data_git_msg = """\
-commit d3291dbdf01960e900e1d863f02f35a45a611454
-Merge: 8bee4ae 9d7df2d
+commit e8a55f900fdce81fc62d261a197eb028f38b211f
+Merge: d3291db e990e9c
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Fri Apr 3 10:36:36 2020 +1100
+Date:   Thu Apr 9 11:47:05 2020 +1000
 
-    Merge pull request #155 from mikey/exceptions
+    Merge pull request #157 from paulusmack/master
     
-    Add decrementer, illegal and system call exceptions
+    Start using cache-inhibited loads and stores to access the UART
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post48"
-tool_version_tuple = (0, 0, 48)
+tool_version_str = "0.0.post49"
+tool_version_tuple = (0, 0, 49)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post48")
+    ptool_version = V("0.0.post49")
 except ImportError:
     pass
 
