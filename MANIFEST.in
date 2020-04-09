@@ -1,2 +1,2 @@
-graft litex/data/cpu/microwatt/vhdl/
+graft pythondata_cpu_microwatt/vhdl/
 global-exclude *.py[cod]
