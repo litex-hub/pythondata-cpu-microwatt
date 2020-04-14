@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post485"
-version_tuple = (0, 0, 485)
+version_str = "0.0.post495"
+version_tuple = (0, 0, 495)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post485")
+    pversion = V("0.0.post495")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post436"
-data_version_tuple = (0, 0, 436)
+data_version_str = "0.0.post446"
+data_version_tuple = (0, 0, 446)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post436")
+    pdata_version = V("0.0.post446")
 except ImportError:
     pass
-data_git_hash = "e8a55f900fdce81fc62d261a197eb028f38b211f"
-data_git_describe = "v0.0-436-ge8a55f9"
+data_git_hash = "97e3d47a13d332e0eb25fea9e8167b7c575f467d"
+data_git_describe = "v0.0-446-g97e3d47"
 data_git_msg = """\
-commit e8a55f900fdce81fc62d261a197eb028f38b211f
-Merge: d3291db e990e9c
+commit 97e3d47a13d332e0eb25fea9e8167b7c575f467d
+Merge: e8a55f9 5657782
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Thu Apr 9 11:47:05 2020 +1000
+Date:   Tue Apr 14 12:47:00 2020 +1000
 
-    Merge pull request #157 from paulusmack/master
+    Merge pull request #158 from paulusmack/excpath
     
-    Start using cache-inhibited loads and stores to access the UART
+    Fix exception stuff so we make timing again
 
 """
 
