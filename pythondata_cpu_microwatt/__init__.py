@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post495"
-version_tuple = (0, 0, 495)
+version_str = "0.0.post506"
+version_tuple = (0, 0, 506)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post495")
+    pversion = V("0.0.post506")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post446"
-data_version_tuple = (0, 0, 446)
+data_version_str = "0.0.post457"
+data_version_tuple = (0, 0, 457)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post446")
+    pdata_version = V("0.0.post457")
 except ImportError:
     pass
-data_git_hash = "97e3d47a13d332e0eb25fea9e8167b7c575f467d"
-data_git_describe = "v0.0-446-g97e3d47"
+data_git_hash = "2b11c81b18b214e33d024c83bf91a6b346cfcd11"
+data_git_describe = "v0.0-457-g2b11c81"
 data_git_msg = """\
-commit 97e3d47a13d332e0eb25fea9e8167b7c575f467d
-Merge: e8a55f9 5657782
+commit 2b11c81b18b214e33d024c83bf91a6b346cfcd11
+Merge: 4c2bd76 05f4f68
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Tue Apr 14 12:47:00 2020 +1000
+Date:   Thu Apr 16 18:42:42 2020 +1000
 
-    Merge pull request #158 from paulusmack/excpath
+    Merge pull request #162 from antonblanchard/bin2hex-removal
     
-    Fix exception stuff so we make timing again
+    rust_lib_demo: Remove bin2hex.py
 
 """
 
