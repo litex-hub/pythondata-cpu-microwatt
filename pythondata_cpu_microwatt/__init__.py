@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post506"
-version_tuple = (0, 0, 506)
+version_str = "0.0.post510"
+version_tuple = (0, 0, 510)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post506")
+    pversion = V("0.0.post510")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post457"
-data_version_tuple = (0, 0, 457)
+data_version_str = "0.0.post461"
+data_version_tuple = (0, 0, 461)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post457")
+    pdata_version = V("0.0.post461")
 except ImportError:
     pass
-data_git_hash = "2b11c81b18b214e33d024c83bf91a6b346cfcd11"
-data_git_describe = "v0.0-457-g2b11c81"
+data_git_hash = "f21f9dd5a0acbe9215703161f599252f1bf87d80"
+data_git_describe = "v0.0-461-gf21f9dd"
 data_git_msg = """\
-commit 2b11c81b18b214e33d024c83bf91a6b346cfcd11
-Merge: 4c2bd76 05f4f68
+commit f21f9dd5a0acbe9215703161f599252f1bf87d80
+Merge: b6bd1ba ff162e4
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Thu Apr 16 18:42:42 2020 +1000
+Date:   Thu Apr 23 19:50:16 2020 +1000
 
-    Merge pull request #162 from antonblanchard/bin2hex-removal
+    Merge pull request #164 from mikey/tags
     
-    rust_lib_demo: Remove bin2hex.py
+    Add VHDL TAGS
 
 """
 
