@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post514"
-version_tuple = (0, 0, 514)
+version_str = "0.0.post519"
+version_tuple = (0, 0, 519)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post514")
+    pversion = V("0.0.post519")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post463"
-data_version_tuple = (0, 0, 463)
+data_version_str = "0.0.post468"
+data_version_tuple = (0, 0, 468)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post463")
+    pdata_version = V("0.0.post468")
 except ImportError:
     pass
-data_git_hash = "098c3fbb2bd0a750475c91128d293b03adde5aa5"
-data_git_describe = "v0.0-463-g098c3fb"
+data_git_hash = "4160f2138d348a368cf6bc9b53ce450f7e6de32c"
+data_git_describe = "v0.0-468-g4160f21"
 data_git_msg = """\
-commit 098c3fbb2bd0a750475c91128d293b03adde5aa5
-Merge: f21f9dd c818853
+commit 4160f2138d348a368cf6bc9b53ce450f7e6de32c
+Merge: 098c3fb 0076f8b
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Fri May 1 19:52:59 2020 +1000
+Date:   Wed May 6 13:27:17 2020 +1000
 
-    Merge pull request #167 from tomtor/patch-1
+    Merge pull request #165 from mikey/xics
     
-    Fix Rust README.md
+    Implement XICS compliant interrupt controller
 
 """
 
