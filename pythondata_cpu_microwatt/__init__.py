@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post519"
-version_tuple = (0, 0, 519)
+version_str = "0.0.post531"
+version_tuple = (0, 0, 531)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post519")
+    pversion = V("0.0.post531")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post468"
-data_version_tuple = (0, 0, 468)
+data_version_str = "0.0.post480"
+data_version_tuple = (0, 0, 480)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post468")
+    pdata_version = V("0.0.post480")
 except ImportError:
     pass
-data_git_hash = "4160f2138d348a368cf6bc9b53ce450f7e6de32c"
-data_git_describe = "v0.0-468-g4160f21"
+data_git_hash = "1ba29a407a223466ff959bd88c4a91e1f85ff622"
+data_git_describe = "v0.0-480-g1ba29a4"
 data_git_msg = """\
-commit 4160f2138d348a368cf6bc9b53ce450f7e6de32c
-Merge: 098c3fb 0076f8b
+commit 1ba29a407a223466ff959bd88c4a91e1f85ff622
+Merge: 4160f21 102fbcf
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Wed May 6 13:27:17 2020 +1000
+Date:   Thu May 7 09:59:19 2020 +1000
 
-    Merge pull request #165 from mikey/xics
+    Merge pull request #166 from paulusmack/master
     
-    Implement XICS compliant interrupt controller
+    MSR fixes, implement privilege checking, implement dcbz
 
 """
 
