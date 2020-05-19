@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post548"
-version_tuple = (0, 0, 548)
+version_str = "0.0.post603"
+version_tuple = (0, 0, 603)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post548")
+    pversion = V("0.0.post603")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post497"
-data_version_tuple = (0, 0, 497)
+data_version_str = "0.0.post552"
+data_version_tuple = (0, 0, 552)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post497")
+    pdata_version = V("0.0.post552")
 except ImportError:
     pass
-data_git_hash = "fcec66acf4dc9b4b5480bf18a118a42ec87c7eba"
-data_git_describe = "v0.0-497-gfcec66a"
+data_git_hash = "354e0fbfea8e0771640522e2c816e8ac13c89229"
+data_git_describe = "v0.0-552-g354e0fb"
 data_git_msg = """\
-commit fcec66acf4dc9b4b5480bf18a118a42ec87c7eba
-Merge: 1ba29a4 e3013f5
+commit 354e0fbfea8e0771640522e2c816e8ac13c89229
+Merge: 6692f0d 5860c2d
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Thu May 14 15:08:33 2020 +1000
+Date:   Tue May 19 14:27:42 2020 +1000
 
-    Merge pull request #170 from antonblanchard/litedram
+    Merge pull request #171 from shenki/mw-debug-features
     
-    LiteDRAM integration
+    mw debug features
 
 """
 
