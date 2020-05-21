@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post606"
-version_tuple = (0, 0, 606)
+version_str = "0.0.post613"
+version_tuple = (0, 0, 613)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post606")
+    pversion = V("0.0.post613")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post555"
-data_version_tuple = (0, 0, 555)
+data_version_str = "0.0.post562"
+data_version_tuple = (0, 0, 562)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post555")
+    pdata_version = V("0.0.post562")
 except ImportError:
     pass
-data_git_hash = "b82d07c8d569494721043d4a9d6d93a22590f335"
-data_git_describe = "v0.0-555-gb82d07c"
+data_git_hash = "cb25167220949530dc5ab7e1a0222c93af2dba96"
+data_git_describe = "v0.0-562-gcb25167"
 data_git_msg = """\
-commit b82d07c8d569494721043d4a9d6d93a22590f335
-Merge: 354e0fb 8c028f2
+commit cb25167220949530dc5ab7e1a0222c93af2dba96
+Merge: b82d07c 7b14819
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Tue May 19 15:53:54 2020 +1000
+Date:   Thu May 21 12:29:55 2020 +1000
 
-    Merge pull request #179 from antonblanchard/yosys-verilator
+    Merge pull request #180 from antonblanchard/Makefile-rework
     
-    Add yosys/verilator support
+    Makefile rework
 
 """
 
