@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post615"
-version_tuple = (0, 0, 615)
+version_str = "0.0.post617"
+version_tuple = (0, 0, 617)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post615")
+    pversion = V("0.0.post617")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post562"
-data_version_tuple = (0, 0, 562)
+data_version_str = "0.0.post564"
+data_version_tuple = (0, 0, 564)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post562")
+    pdata_version = V("0.0.post564")
 except ImportError:
     pass
-data_git_hash = "cb25167220949530dc5ab7e1a0222c93af2dba96"
-data_git_describe = "v0.0-562-gcb25167"
+data_git_hash = "bdb428a40bfa1e9a374c816cdf3da67315be5ad2"
+data_git_describe = "v0.0-564-gbdb428a"
 data_git_msg = """\
-commit cb25167220949530dc5ab7e1a0222c93af2dba96
-Merge: b82d07c 7b14819
+commit bdb428a40bfa1e9a374c816cdf3da67315be5ad2
+Merge: cb25167 04c56a0
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Thu May 21 12:29:55 2020 +1000
+Date:   Sat May 23 16:50:12 2020 +1000
 
-    Merge pull request #180 from antonblanchard/Makefile-rework
+    Merge pull request #181 from antonblanchard/Makefile-rework-2
     
-    Makefile rework
+    Pass clock frequency to UART sim wrapper
 
 """
 
