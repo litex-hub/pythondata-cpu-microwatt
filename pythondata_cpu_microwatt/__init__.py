@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post617"
-version_tuple = (0, 0, 617)
+version_str = "0.0.post624"
+version_tuple = (0, 0, 624)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post617")
+    pversion = V("0.0.post624")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post564"
-data_version_tuple = (0, 0, 564)
+data_version_str = "0.0.post571"
+data_version_tuple = (0, 0, 571)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post564")
+    pdata_version = V("0.0.post571")
 except ImportError:
     pass
-data_git_hash = "bdb428a40bfa1e9a374c816cdf3da67315be5ad2"
-data_git_describe = "v0.0-564-gbdb428a"
+data_git_hash = "84ab28b3d28bcfa597aec7ae6d206b2397737baf"
+data_git_describe = "v0.0-571-g84ab28b"
 data_git_msg = """\
-commit bdb428a40bfa1e9a374c816cdf3da67315be5ad2
-Merge: cb25167 04c56a0
+commit 84ab28b3d28bcfa597aec7ae6d206b2397737baf
+Merge: 4c1a731 12f36b4
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Sat May 23 16:50:12 2020 +1000
+Date:   Tue Jun 2 11:54:00 2020 +1000
 
-    Merge pull request #181 from antonblanchard/Makefile-rework-2
+    Merge pull request #178 from antonblanchard/intercon
     
-    Pass clock frequency to UART sim wrapper
+    Interconnect timing improvements from Ben
 
 """
 
