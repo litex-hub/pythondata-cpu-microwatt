@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post624"
-version_tuple = (0, 0, 624)
+version_str = "0.0.post627"
+version_tuple = (0, 0, 627)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post624")
+    pversion = V("0.0.post627")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post571"
-data_version_tuple = (0, 0, 571)
+data_version_str = "0.0.post574"
+data_version_tuple = (0, 0, 574)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post571")
+    pdata_version = V("0.0.post574")
 except ImportError:
     pass
-data_git_hash = "84ab28b3d28bcfa597aec7ae6d206b2397737baf"
-data_git_describe = "v0.0-571-g84ab28b"
+data_git_hash = "62233eddd7fcc9284650e201fa216fa0788d631e"
+data_git_describe = "v0.0-574-g62233ed"
 data_git_msg = """\
-commit 84ab28b3d28bcfa597aec7ae6d206b2397737baf
-Merge: 4c1a731 12f36b4
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Tue Jun 2 11:54:00 2020 +1000
+commit 62233eddd7fcc9284650e201fa216fa0788d631e
+Merge: 84ab28b 60d2b8a
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Wed Jun 3 14:20:02 2020 +1000
 
-    Merge pull request #178 from antonblanchard/intercon
+    Merge pull request #168 from shenki/flash-arty
     
-    Interconnect timing improvements from Ben
+    Scripts to write data to the Arty's SPI flash
 
 """
 
