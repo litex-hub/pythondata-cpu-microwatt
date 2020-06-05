@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post627"
-version_tuple = (0, 0, 627)
+version_str = "0.0.post646"
+version_tuple = (0, 0, 646)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post627")
+    pversion = V("0.0.post646")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post574"
-data_version_tuple = (0, 0, 574)
+data_version_str = "0.0.post593"
+data_version_tuple = (0, 0, 593)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post574")
+    pdata_version = V("0.0.post593")
 except ImportError:
     pass
-data_git_hash = "62233eddd7fcc9284650e201fa216fa0788d631e"
-data_git_describe = "v0.0-574-g62233ed"
+data_git_hash = "983f4fefe15800e9c235baeae4a99a5b1737e6da"
+data_git_describe = "v0.0-593-g983f4fe"
 data_git_msg = """\
-commit 62233eddd7fcc9284650e201fa216fa0788d631e
-Merge: 84ab28b 60d2b8a
+commit 983f4fefe15800e9c235baeae4a99a5b1737e6da
+Merge: 4a4a98d b0e15f2
 Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Wed Jun 3 14:20:02 2020 +1000
+Date:   Fri Jun 5 13:16:56 2020 +1000
 
-    Merge pull request #168 from shenki/flash-arty
+    Merge pull request #191 from ozbenh/litedram
     
-    Scripts to write data to the Arty's SPI flash
+    Litedram updates with L2 cache and sim support
 
 """
 
