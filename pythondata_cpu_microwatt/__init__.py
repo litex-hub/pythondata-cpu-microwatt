@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post646"
-version_tuple = (0, 0, 646)
+version_str = "0.0.post656"
+version_tuple = (0, 0, 656)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post646")
+    pversion = V("0.0.post656")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post593"
-data_version_tuple = (0, 0, 593)
+data_version_str = "0.0.post603"
+data_version_tuple = (0, 0, 603)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post593")
+    pdata_version = V("0.0.post603")
 except ImportError:
     pass
-data_git_hash = "983f4fefe15800e9c235baeae4a99a5b1737e6da"
-data_git_describe = "v0.0-593-g983f4fe"
+data_git_hash = "e46c46ab5fdb6a83f8ee700a763b51d449650314"
+data_git_describe = "v0.0-603-ge46c46a"
 data_git_msg = """\
-commit 983f4fefe15800e9c235baeae4a99a5b1737e6da
-Merge: 4a4a98d b0e15f2
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Fri Jun 5 13:16:56 2020 +1000
+commit e46c46ab5fdb6a83f8ee700a763b51d449650314
+Merge: cff4023 afa82be
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Fri Jun 5 20:17:01 2020 +1000
 
-    Merge pull request #191 from ozbenh/litedram
+    Merge pull request #193 from paulusmack/master
     
-    Litedram updates with L2 cache and sim support
+    Minor improvements and reformatting
 
 """
 
