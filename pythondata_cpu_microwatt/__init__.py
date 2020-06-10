@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post656"
-version_tuple = (0, 0, 656)
+version_str = "0.0.post661"
+version_tuple = (0, 0, 661)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post656")
+    pversion = V("0.0.post661")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post603"
-data_version_tuple = (0, 0, 603)
+data_version_str = "0.0.post608"
+data_version_tuple = (0, 0, 608)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post603")
+    pdata_version = V("0.0.post608")
 except ImportError:
     pass
-data_git_hash = "e46c46ab5fdb6a83f8ee700a763b51d449650314"
-data_git_describe = "v0.0-603-ge46c46a"
+data_git_hash = "13da4caafb0f652d9f00744a62479a0eab2ccfee"
+data_git_describe = "v0.0-608-g13da4ca"
 data_git_msg = """\
-commit e46c46ab5fdb6a83f8ee700a763b51d449650314
-Merge: cff4023 afa82be
+commit 13da4caafb0f652d9f00744a62479a0eab2ccfee
+Merge: 0739b55 097d19f
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Fri Jun 5 20:17:01 2020 +1000
+Date:   Wed Jun 10 09:54:35 2020 +1000
 
-    Merge pull request #193 from paulusmack/master
+    Merge pull request #196 from ozbenh/makefile-lib-fix
     
-    Minor improvements and reformatting
+    Makefile: Improve unisim library generation
 
 """
 
