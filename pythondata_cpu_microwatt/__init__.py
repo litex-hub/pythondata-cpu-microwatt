@@ -4,42 +4,42 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post661"
-version_tuple = (0, 0, 661)
+version_str = "0.0.post672"
+version_tuple = (0, 0, 672)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post661")
+    pversion = V("0.0.post672")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post608"
-data_version_tuple = (0, 0, 608)
+data_version_str = "0.0.post614"
+data_version_tuple = (0, 0, 614)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post608")
+    pdata_version = V("0.0.post614")
 except ImportError:
     pass
-data_git_hash = "13da4caafb0f652d9f00744a62479a0eab2ccfee"
-data_git_describe = "v0.0-608-g13da4ca"
+data_git_hash = "6bb3837b332891d8414cfc80ad28b0b5585dd5e3"
+data_git_describe = "v0.0-614-g6bb3837"
 data_git_msg = """\
-commit 13da4caafb0f652d9f00744a62479a0eab2ccfee
-Merge: 0739b55 097d19f
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Wed Jun 10 09:54:35 2020 +1000
+commit 6bb3837b332891d8414cfc80ad28b0b5585dd5e3
+Merge: 13da4ca 183d05d
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Wed Jun 10 19:37:01 2020 +1000
 
-    Merge pull request #196 from ozbenh/makefile-lib-fix
+    Merge pull request #194 from ozbenh/misc
     
-    Makefile: Improve unisim library generation
+    Fix syscon registers usage and add "save" function to mw_debug
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post53"
-tool_version_tuple = (0, 0, 53)
+tool_version_str = "0.0.post58"
+tool_version_tuple = (0, 0, 58)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post53")
+    ptool_version = V("0.0.post58")
 except ImportError:
     pass
 
