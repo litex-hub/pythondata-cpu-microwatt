@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post674"
-version_tuple = (0, 0, 674)
+version_str = "0.0.post676"
+version_tuple = (0, 0, 676)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post674")
+    pversion = V("0.0.post676")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post614"
-data_version_tuple = (0, 0, 614)
+data_version_str = "0.0.post616"
+data_version_tuple = (0, 0, 616)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post614")
+    pdata_version = V("0.0.post616")
 except ImportError:
     pass
-data_git_hash = "6bb3837b332891d8414cfc80ad28b0b5585dd5e3"
-data_git_describe = "v0.0-614-g6bb3837"
+data_git_hash = "7577cb18fbd92ee3f5acad9084e4fe700092255a"
+data_git_describe = "v0.0-616-g7577cb1"
 data_git_msg = """\
-commit 6bb3837b332891d8414cfc80ad28b0b5585dd5e3
-Merge: 13da4ca 183d05d
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Wed Jun 10 19:37:01 2020 +1000
+commit 7577cb18fbd92ee3f5acad9084e4fe700092255a
+Merge: 6bb3837 9653b29
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Fri Jun 12 10:25:09 2020 +1000
 
-    Merge pull request #194 from ozbenh/misc
+    Merge pull request #201 from mikey/github-actions
     
-    Fix syscon registers usage and add "save" function to mw_debug
+    Move from travis to github workflows
 
 """
 
