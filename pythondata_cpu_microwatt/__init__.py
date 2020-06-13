@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post676"
-version_tuple = (0, 0, 676)
+version_str = "0.0.post694"
+version_tuple = (0, 0, 694)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post676")
+    pversion = V("0.0.post694")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post616"
-data_version_tuple = (0, 0, 616)
+data_version_str = "0.0.post634"
+data_version_tuple = (0, 0, 634)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post616")
+    pdata_version = V("0.0.post634")
 except ImportError:
     pass
-data_git_hash = "7577cb18fbd92ee3f5acad9084e4fe700092255a"
-data_git_describe = "v0.0-616-g7577cb1"
+data_git_hash = "12a257f01edb3c1d8986e89e6750d4a1f69822f4"
+data_git_describe = "v0.0-634-g12a257f"
 data_git_msg = """\
-commit 7577cb18fbd92ee3f5acad9084e4fe700092255a
-Merge: 6bb3837 9653b29
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Fri Jun 12 10:25:09 2020 +1000
+commit 12a257f01edb3c1d8986e89e6750d4a1f69822f4
+Merge: bf6cc2a 176ae5c
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Sat Jun 13 12:36:16 2020 +1000
 
-    Merge pull request #201 from mikey/github-actions
+    Merge pull request #205 from ozbenh/timing
     
-    Move from travis to github workflows
+    Timing improvements
 
 """
 
