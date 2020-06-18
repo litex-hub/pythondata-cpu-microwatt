@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post694"
-version_tuple = (0, 0, 694)
+version_str = "0.0.post701"
+version_tuple = (0, 0, 701)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post694")
+    pversion = V("0.0.post701")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post634"
-data_version_tuple = (0, 0, 634)
+data_version_str = "0.0.post641"
+data_version_tuple = (0, 0, 641)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post634")
+    pdata_version = V("0.0.post641")
 except ImportError:
     pass
-data_git_hash = "12a257f01edb3c1d8986e89e6750d4a1f69822f4"
-data_git_describe = "v0.0-634-g12a257f"
+data_git_hash = "1fedc7a86adedc145c8fab6f8984e38607db8e4a"
+data_git_describe = "v0.0-641-g1fedc7a"
 data_git_msg = """\
-commit 12a257f01edb3c1d8986e89e6750d4a1f69822f4
-Merge: bf6cc2a 176ae5c
+commit 1fedc7a86adedc145c8fab6f8984e38607db8e4a
+Merge: 12a257f 67b6117
 Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Sat Jun 13 12:36:16 2020 +1000
+Date:   Thu Jun 18 07:26:01 2020 +1000
 
-    Merge pull request #205 from ozbenh/timing
+    Merge pull request #207 from ozbenh/misc
     
-    Timing improvements
+    Random cleanups of the SoC interfaces
 
 """
 
