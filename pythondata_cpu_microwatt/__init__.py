@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post701"
-version_tuple = (0, 0, 701)
+version_str = "0.0.post731"
+version_tuple = (0, 0, 731)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post701")
+    pversion = V("0.0.post731")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post641"
-data_version_tuple = (0, 0, 641)
+data_version_str = "0.0.post671"
+data_version_tuple = (0, 0, 671)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post641")
+    pdata_version = V("0.0.post671")
 except ImportError:
     pass
-data_git_hash = "1fedc7a86adedc145c8fab6f8984e38607db8e4a"
-data_git_describe = "v0.0-641-g1fedc7a"
+data_git_hash = "695e081c35792e9db7e14da206e1410dc4a8e6b9"
+data_git_describe = "v0.0-671-g695e081"
 data_git_msg = """\
-commit 1fedc7a86adedc145c8fab6f8984e38607db8e4a
-Merge: 12a257f 67b6117
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Thu Jun 18 07:26:01 2020 +1000
+commit 695e081c35792e9db7e14da206e1410dc4a8e6b9
+Merge: b90a0a2 bb54af5
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Tue Jun 23 14:32:42 2020 +1000
 
-    Merge pull request #207 from ozbenh/misc
+    Merge pull request #210 from ozbenh/xics
     
-    Random cleanups of the SoC interfaces
+    xics: Cleanups and add a simple ICS for use by Linux
 
 """
 
