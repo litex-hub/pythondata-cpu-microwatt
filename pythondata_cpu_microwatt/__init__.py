@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post731"
-version_tuple = (0, 0, 731)
+version_str = "0.0.post733"
+version_tuple = (0, 0, 733)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post731")
+    pversion = V("0.0.post733")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post671"
-data_version_tuple = (0, 0, 671)
+data_version_str = "0.0.post673"
+data_version_tuple = (0, 0, 673)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post671")
+    pdata_version = V("0.0.post673")
 except ImportError:
     pass
-data_git_hash = "695e081c35792e9db7e14da206e1410dc4a8e6b9"
-data_git_describe = "v0.0-671-g695e081"
+data_git_hash = "7566f04fe3f0807cde42b1965feae57fe4346476"
+data_git_describe = "v0.0-673-g7566f04"
 data_git_msg = """\
-commit 695e081c35792e9db7e14da206e1410dc4a8e6b9
-Merge: b90a0a2 bb54af5
+commit 7566f04fe3f0807cde42b1965feae57fe4346476
+Merge: 695e081 60e5f7b
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Jun 23 14:32:42 2020 +1000
+Date:   Tue Jun 23 16:58:06 2020 +1000
 
-    Merge pull request #210 from ozbenh/xics
+    Merge pull request #211 from shenki/spi-constraint
     
-    xics: Cleanups and add a simple ICS for use by Linux
+    spi: Fix dat_i_l constraints
 
 """
 
