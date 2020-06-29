@@ -241,7 +241,7 @@ uint64_t main(void)
 	bool try_flash = false;
 
 	/* Init the UART */
-	potato_uart_init();
+	console_init();
 
 	printf("\n\nWelcome to Microwatt !\n\n");
 
@@ -260,6 +260,8 @@ uint64_t main(void)
 		printf("BRAM ");
 	if (ftr & SYS_REG_INFO_HAS_SPI_FLASH)
 		printf("SPIFLASH ");
+	if (ftr & SYS_REG_INFO_HAS_LITEETH)
+		printf("ETHERNET ");
 	printf("\n");
 	if (ftr & SYS_REG_INFO_HAS_BRAM) {
 		val = readq(SYSCON_BASE + SYS_REG_BRAMINFO) & SYS_REG_BRAMINFO_SIZE_MASK;
