@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post733"
-version_tuple = (0, 0, 733)
+version_str = "0.0.post748"
+version_tuple = (0, 0, 748)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post733")
+    pversion = V("0.0.post748")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post673"
-data_version_tuple = (0, 0, 673)
+data_version_str = "0.0.post688"
+data_version_tuple = (0, 0, 688)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post673")
+    pdata_version = V("0.0.post688")
 except ImportError:
     pass
-data_git_hash = "7566f04fe3f0807cde42b1965feae57fe4346476"
-data_git_describe = "v0.0-673-g7566f04"
+data_git_hash = "57604c1a6e3a5315f61db074c42ad2063a799246"
+data_git_describe = "v0.0-688-g57604c1"
 data_git_msg = """\
-commit 7566f04fe3f0807cde42b1965feae57fe4346476
-Merge: 695e081 60e5f7b
+commit 57604c1a6e3a5315f61db074c42ad2063a799246
+Merge: 9bbef03 434962b
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Jun 23 16:58:06 2020 +1000
+Date:   Mon Jun 29 12:19:06 2020 +1000
 
-    Merge pull request #211 from shenki/spi-constraint
+    Merge pull request #213 from ozbenh/uart16550
     
-    spi: Fix dat_i_l constraints
+    Add support for standard 16550 style UART
 
 """
 
