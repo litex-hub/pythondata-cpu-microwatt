@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post748"
-version_tuple = (0, 0, 748)
+version_str = "0.0.post755"
+version_tuple = (0, 0, 755)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post748")
+    pversion = V("0.0.post755")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post688"
-data_version_tuple = (0, 0, 688)
+data_version_str = "0.0.post695"
+data_version_tuple = (0, 0, 695)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post688")
+    pdata_version = V("0.0.post695")
 except ImportError:
     pass
-data_git_hash = "57604c1a6e3a5315f61db074c42ad2063a799246"
-data_git_describe = "v0.0-688-g57604c1"
+data_git_hash = "ce0205b262f5731900b054dfc43f06f7af14aa98"
+data_git_describe = "v0.0-695-gce0205b"
 data_git_msg = """\
-commit 57604c1a6e3a5315f61db074c42ad2063a799246
-Merge: 9bbef03 434962b
+commit ce0205b262f5731900b054dfc43f06f7af14aa98
+Merge: 419c9a6 7406219
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Jun 29 12:19:06 2020 +1000
+Date:   Tue Jun 30 15:47:36 2020 +1000
 
-    Merge pull request #213 from ozbenh/uart16550
+    Merge pull request #216 from paulusmack/cfar
     
-    Add support for standard 16550 style UART
+    Timing and speed improvements, implement CFAR register
 
 """
 
