@@ -14,13 +14,15 @@ entity toplevel is
 	RAM_INIT_FILE : string   := "firmware.hex";
 	RESET_LOW     : boolean  := true;
 	CLK_FREQUENCY : positive := 100000000;
+        HAS_FPU       : boolean  := true;
 	USE_LITEDRAM  : boolean  := false;
 	NO_BRAM       : boolean  := false;
 	DISABLE_FLATTEN_CORE : boolean := false;
         SPI_FLASH_OFFSET   : integer := 10485760;
         SPI_FLASH_DEF_CKDV : natural := 1;
         SPI_FLASH_DEF_QUAD : boolean := true;
-        UART_IS_16550      : boolean := true;
+        LOG_LENGTH         : natural := 2048;
+        UART_IS_16550      : boolean := true
 	);
     port(
 	ext_clk   : in  std_ulogic;
@@ -119,6 +121,7 @@ begin
 	    RAM_INIT_FILE => RAM_INIT_FILE,
 	    SIM           => false,
 	    CLK_FREQ      => CLK_FREQUENCY,
+            HAS_FPU       => HAS_FPU,
 	    HAS_DRAM      => USE_LITEDRAM,
 	    DRAM_SIZE     => 512 * 1024 * 1024,
             DRAM_INIT_SIZE => PAYLOAD_SIZE,
@@ -128,6 +131,7 @@ begin
             SPI_FLASH_OFFSET   => SPI_FLASH_OFFSET,
             SPI_FLASH_DEF_CKDV => SPI_FLASH_DEF_CKDV,
             SPI_FLASH_DEF_QUAD => SPI_FLASH_DEF_QUAD,
+            LOG_LENGTH         => LOG_LENGTH,
             UART0_IS_16550     => UART_IS_16550
 	    )
 	port map (
@@ -151,8 +155,8 @@ begin
 	    wb_dram_out         => wb_dram_out,
 	    wb_ext_io_in        => wb_ext_io_in,
 	    wb_ext_io_out       => wb_ext_io_out,
-	    wb_ext_is_dram_csr  => wb_dram_is_csr,
-	    wb_ext_is_dram_init => wb_dram_is_init,
+	    wb_ext_is_dram_csr  => wb_ext_is_dram_csr,
+	    wb_ext_is_dram_init => wb_ext_is_dram_init,
 	    alt_reset           => core_alt_reset
 	    );
 
@@ -256,6 +260,8 @@ begin
 	    generic map(
 		DRAM_ABITS => 25,
 		DRAM_ALINES => 15,
+                DRAM_DLINES => 16,
+                DRAM_PORT_WIDTH => 128,
                 PAYLOAD_FILE => RAM_INIT_FILE,
                 PAYLOAD_SIZE => PAYLOAD_SIZE
 		)
@@ -264,6 +270,7 @@ begin
 		rst             => pll_rst,
 		system_clk	=> system_clk,
 		system_reset	=> soc_rst,
+                core_alt_reset  => core_alt_reset,
 		pll_locked	=> system_clk_locked,
 
 		wb_in		=> wb_dram_in,

@@ -14,6 +14,7 @@ entity toplevel is
         RAM_INIT_FILE      : string   := "firmware.hex";
         RESET_LOW          : boolean  := true;
         CLK_FREQUENCY      : positive := 100000000;
+        HAS_FPU            : boolean  := true;
         USE_LITEDRAM       : boolean  := false;
         NO_BRAM            : boolean  := false;
         DISABLE_FLATTEN_CORE : boolean := false;
@@ -168,6 +169,7 @@ begin
             RAM_INIT_FILE      => RAM_INIT_FILE,
             SIM                => false,
             CLK_FREQ           => CLK_FREQUENCY,
+            HAS_FPU            => HAS_FPU,
             HAS_DRAM           => USE_LITEDRAM,
             DRAM_SIZE          => 256 * 1024 * 1024,
             DRAM_INIT_SIZE     => PAYLOAD_SIZE,
@@ -341,6 +343,8 @@ begin
             generic map(
                 DRAM_ABITS => 24,
                 DRAM_ALINES => 14,
+                DRAM_DLINES => 16,
+                DRAM_PORT_WIDTH => 128,
                 PAYLOAD_FILE => RAM_INIT_FILE,
                 PAYLOAD_SIZE => PAYLOAD_SIZE
                 )

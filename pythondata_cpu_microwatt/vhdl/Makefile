@@ -48,16 +48,18 @@ core_files = decode_types.vhdl common.vhdl wishbone_types.vhdl fetch1.vhdl \
 	cr_file.vhdl crhelpers.vhdl ppc_fx_insns.vhdl rotator.vhdl \
 	logical.vhdl countzero.vhdl multiply.vhdl divider.vhdl execute1.vhdl \
 	loadstore1.vhdl mmu.vhdl dcache.vhdl writeback.vhdl core_debug.vhdl \
-	core.vhdl
+	core.vhdl fpu.vhdl
 
 soc_files = $(core_files) wishbone_arbiter.vhdl wishbone_bram_wrapper.vhdl sync_fifo.vhdl \
 	wishbone_debug_master.vhdl xics.vhdl syscon.vhdl soc.vhdl \
 	spi_rxtx.vhdl spi_flash_ctrl.vhdl
 
+uart_files = $(wildcard uart16550/*.v)
 
 soc_sim_files = $(soc_files) sim_console.vhdl sim_pp_uart.vhdl sim_bram_helpers.vhdl \
 	sim_bram.vhdl sim_jtag_socket.vhdl sim_jtag.vhdl dmi_dtm_xilinx.vhdl \
-	sim_16550_uart.vhdl
+	sim_16550_uart.vhdl \
+	random.vhdl glibc_random.vhdl glibc_random_helpers.vhdl
 
 soc_sim_c_files = sim_vhpi_c.c sim_bram_helpers_c.c sim_console_c.c \
 	sim_jtag_socket_c.c
@@ -71,7 +73,7 @@ unisim_lib = $(unisim_dir)/unisim-obj08.cf
 unisim_lib_files = $(unisim_dir)/BSCANE2.vhdl $(unisim_dir)/BUFG.vhdl \
 	$(unisim_dir)/unisim_vcomponents.vhdl
 $(unisim_lib): $(unisim_lib_files)
-	ghdl -i --std=08 --work=unisim --workdir=$(unisim_dir) $^
+	$(GHDL) -i --std=08 --work=unisim --workdir=$(unisim_dir) $^
 GHDLFLAGS += -P$(unisim_dir)
 
 core_tbs = multiply_tb divider_tb rotator_tb countzero_tb
@@ -85,7 +87,7 @@ fmf_lib = $(fmf_dir)/fmf-obj08.cf
 fmf_lib_files = $(wildcard $(fmf_dir)/*.vhd)
 GHDLFLAGS += -P$(fmf_dir)
 $(fmf_lib): $(fmf_lib_files)
-	ghdl -i --std=08 --work=fmf --workdir=$(fmf_dir) $^
+	$(GHDL) -i --std=08 --work=fmf --workdir=$(fmf_dir) $^
 
 flash_model_files=$(FLASH_MODEL_PATH)/s25fl128s.vhd
 flash_model_files: $(fmf_lib)
@@ -142,43 +144,50 @@ RAM_INIT_FILE=hello_world/hello_world.hex
 #MEMORY_SIZE=393216
 #RAM_INIT_FILE=micropython/firmware.hex
 
+FPGA_TARGET ?= ORANGE-CRAB
+
 # OrangeCrab with ECP85
+ifeq ($(FPGA_TARGET), ORANGE-CRAB)
 RESET_LOW=true
 CLK_INPUT=50000000
-CLK_FREQUENCY=50000000
+CLK_FREQUENCY=40000000
 LPF=constraints/orange-crab.lpf
 PACKAGE=CSFBGA285
-NEXTPNR_FLAGS=--um5g-85k --freq 50
+NEXTPNR_FLAGS=--um5g-85k --freq 40
 OPENOCD_JTAG_CONFIG=openocd/olimex-arm-usb-tiny-h.cfg
 OPENOCD_DEVICE_CONFIG=openocd/LFE5UM5G-85F.cfg
+endif
 
 # ECP5-EVN
-#RESET_LOW=true
-#CLK_INPUT=12000000
-#CLK_FREQUENCY=12000000
-#LPF=constraints/ecp5-evn.lpf
-#PACKAGE=CABGA381
-#NEXTPNR_FLAGS=--um5g-85k --freq 12
-#OPENOCD_JTAG_CONFIG=openocd/ecp5-evn.cfg
-#OPENOCD_DEVICE_CONFIG=openocd/LFE5UM5G-85F.cfg
+ifeq ($(FPGA_TARGET), ECP5-EVN)
+RESET_LOW=true
+CLK_INPUT=12000000
+CLK_FREQUENCY=40000000
+LPF=constraints/ecp5-evn.lpf
+PACKAGE=CABGA381
+NEXTPNR_FLAGS=--um5g-85k --freq 40
+OPENOCD_JTAG_CONFIG=openocd/ecp5-evn.cfg
+OPENOCD_DEVICE_CONFIG=openocd/LFE5UM5G-85F.cfg
+endif
 
 GHDL_IMAGE_GENERICS=-gMEMORY_SIZE=$(MEMORY_SIZE) -gRAM_INIT_FILE=$(RAM_INIT_FILE) \
 	-gRESET_LOW=$(RESET_LOW) -gCLK_INPUT=$(CLK_INPUT) -gCLK_FREQUENCY=$(CLK_FREQUENCY)
 
-clkgen=fpga/clk_gen_bypass.vhd
+clkgen=fpga/clk_gen_ecp5.vhd
 toplevel=fpga/top-generic.vhdl
 dmi_dtm=dmi_dtm_dummy.vhdl
 
 fpga_files = $(core_files) $(soc_files) fpga/soc_reset.vhdl \
-	fpga/pp_fifo.vhd fpga/pp_soc_uart.vhd fpga/main_bram.vhdl
+	fpga/pp_fifo.vhd fpga/pp_soc_uart.vhd fpga/main_bram.vhdl \
+	nonrandom.vhdl
 
 synth_files = $(core_files) $(soc_files) $(fpga_files) $(clkgen) $(toplevel) $(dmi_dtm)
 
-microwatt.json: $(synth_files)
-	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 $(GHDL_IMAGE_GENERICS) $(GHDL_TARGET_GENERICS) $(synth_files) -e toplevel; synth_ecp5 -json $@"
+microwatt.json: $(synth_files) $(RAM_INIT_FILE)
+	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 --no-formal $(GHDL_IMAGE_GENERICS) $(GHDL_TARGET_GENERICS) $(synth_files) -e toplevel; synth_ecp5 -json $@  $(SYNTH_ECP5_FLAGS)" $(uart_files)
 
-microwatt.v: $(synth_files)
-	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 $(GHDL_IMAGE_GENERICS) $(GHDL_TARGET_GENERICS) $(synth_files) -e toplevel; write_verilog $@"
+microwatt.v: $(synth_files) $(RAM_INIT_FILE)
+	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 --no-formal $(GHDL_IMAGE_GENERICS) $(GHDL_TARGET_GENERICS) $(synth_files) -e toplevel; write_verilog $@" $(uart_files)
 
 # Need to investigate why yosys is hitting verilator warnings, and eventually turn on -Wall
 microwatt-verilator: microwatt.v verilator/microwatt-verilator.cpp verilator/uart-verilator.c
@@ -187,7 +196,8 @@ microwatt-verilator: microwatt.v verilator/microwatt-verilator.cpp verilator/uar
 	@cp -f obj_dir/microwatt-verilator microwatt-verilator
 
 microwatt_out.config: microwatt.json $(LPF)
-	$(NEXTPNR) --json $< --lpf $(LPF) --textcfg $@ $(NEXTPNR_FLAGS) --package $(PACKAGE)
+	$(NEXTPNR) --json $< --lpf $(LPF) --textcfg $@.tmp $(NEXTPNR_FLAGS) --package $(PACKAGE)
+	mv -f $@.tmp $@
 
 microwatt.bit: microwatt_out.config
 	$(ECPPACK) --svf microwatt.svf $< $@

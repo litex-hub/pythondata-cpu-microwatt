@@ -23,6 +23,7 @@ filesets:
       - cr_hazard.vhdl
       - control.vhdl
       - execute1.vhdl
+      - fpu.vhdl
       - loadstore1.vhdl
       - mmu.vhdl
       - dcache.vhdl
@@ -64,6 +65,8 @@ filesets:
   xilinx_specific:
     files:
       - xilinx-mult.vhdl : {file_type : vhdlSource-2008}
+      - fpga/fpga-random.vhdl : {file_type : vhdlSource-2008}
+      - fpga/fpga-random.xdc : {file_type : xdc}
 
   debug_xilinx:
     files:
@@ -84,6 +87,18 @@ filesets:
       - fpga/nexys-video.xdc : {file_type : xdc}
       - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
       - fpga/top-nexys-video.vhdl : {file_type : vhdlSource-2008}
+
+  acorn_cle_215:
+    files:
+      - fpga/acorn-cle-215.xdc : {file_type : xdc}
+      - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
+      - fpga/top-acorn-cle-215.vhdl : {file_type : vhdlSource-2008}
+
+  genesys2:
+    files:
+      - fpga/genesys2.xdc : {file_type : xdc}
+      - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
+      - fpga/top-genesys2.vhdl : {file_type : vhdlSource-2008}
 
   arty_a7:
     files:
@@ -118,9 +133,76 @@ targets:
       - disable_flatten_core
       - log_length=2048
       - uart_is_16550
-      - has_uart1
+      - has_fpu
     tools:
       vivado: {part : xc7a100tcsg324-1}
+    toplevel : toplevel
+
+  acorn-cle-215-nodram:
+    default_tool: vivado
+    filesets: [core, acorn_cle_215, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    parameters :
+      - memory_size
+      - ram_init_file
+      - clk_input
+      - clk_frequency
+      - disable_flatten_core
+      - spi_flash_offset=10485760
+      - log_length=2048
+      - uart_is_16550
+    tools:
+      vivado: {part : xc7a200tsbg484-2}
+    toplevel : toplevel
+
+  genesys2-nodram:
+    default_tool: vivado
+    filesets: [core, genesys2, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    parameters :
+      - memory_size
+      - ram_init_file
+      - clk_frequency
+      - use_litedram=false
+      - no_bram=false
+      - disable_flatten_core
+      - spi_flash_offset=10485760
+      - log_length=2048
+      - uart_is_16550=false
+    tools:
+      vivado: {part : xc7k325tffg900-2}
+    toplevel : toplevel
+
+  acorn-cle-215:
+    default_tool: vivado
+    filesets: [core, acorn_cle_215, soc, fpga, debug_xilinx, litedram, uart16550, xilinx_specific]
+    parameters :
+      - memory_size
+      - ram_init_file
+      - use_litedram=true
+      - disable_flatten_core
+      - no_bram
+      - spi_flash_offset=10485760
+      - log_length=2048
+      - uart_is_16550
+    generate: [litedram_acorn_cle_215]
+    tools:
+      vivado: {part : xc7a200tsbg484-2}
+    toplevel : toplevel
+
+  genesys2:
+    default_tool: vivado
+    filesets: [core, genesys2, soc, fpga, debug_xilinx, litedram, uart16550, xilinx_specific]
+    parameters :
+      - memory_size
+      - ram_init_file
+      - use_litedram=true
+      - disable_flatten_core
+      - no_bram
+      - spi_flash_offset=10485760
+      - log_length=2048
+      - uart_is_16550=false
+    generate: [litedram_genesys2]
+    tools:
+      vivado: {part : xc7k325tffg900-2}
     toplevel : toplevel
 
   nexys_video-nodram:
@@ -135,7 +217,7 @@ targets:
       - spi_flash_offset=10485760
       - log_length=2048
       - uart_is_16550
-      - has_uart1
+      - has_fpu
     tools:
       vivado: {part : xc7a200tsbg484-1}
     toplevel : toplevel
@@ -151,6 +233,8 @@ targets:
       - no_bram
       - spi_flash_offset=10485760
       - log_length=2048
+      - uart_is_16550
+      - has_fpu
     generate: [litedram_nexys_video]
     tools:
       vivado: {part : xc7a200tsbg484-1}
@@ -169,6 +253,7 @@ targets:
       - log_length=512
       - uart_is_16550
       - has_uart1
+      - has_fpu=false
     tools:
       vivado: {part : xc7a35ticsg324-1L}
     toplevel : toplevel
@@ -187,6 +272,7 @@ targets:
       - log_length=512
       - uart_is_16550
       - has_uart1
+      - has_fpu=false
     generate: [litedram_arty, liteeth_arty]
     tools:
       vivado: {part : xc7a35ticsg324-1L}
@@ -205,6 +291,7 @@ targets:
       - log_length=2048
       - uart_is_16550
       - has_uart1
+      - has_fpu
     tools:
       vivado: {part : xc7a100ticsg324-1L}
     toplevel : toplevel
@@ -223,6 +310,7 @@ targets:
       - log_length=2048
       - uart_is_16550
       - has_uart1
+      - has_fpu
     generate: [litedram_arty, liteeth_arty]
     tools:
       vivado: {part : xc7a100ticsg324-1L}
@@ -240,7 +328,7 @@ targets:
       - disable_flatten_core
       - log_length=512
       - uart_is_16550
-      - has_uart1
+      - has_fpu=false
     tools:
       vivado: {part : xc7a35tcpg236-1}
     toplevel : toplevel
@@ -263,6 +351,14 @@ generate:
   litedram_nexys_video:
     generator: litedram_gen
     parameters: {board : nexys-video}
+
+  litedram_acorn_cle_215:
+    generator: litedram_gen
+    parameters: {board : acorn-cle-215}
+
+  litedram_genesys2:
+    generator: litedram_gen
+    parameters: {board : genesys2}
 
 parameters:
   memory_size:
@@ -292,6 +388,12 @@ parameters:
     description : Generated system clock frequency in HZ (for top-generic based boards)
     paramtype   : generic
     default     : 100000000
+
+  has_fpu:
+    datatype    : bool
+    description : Include a floating-point unit in the core
+    paramtype   : generic
+    default     : true
 
   disable_flatten_core:
     datatype    : bool

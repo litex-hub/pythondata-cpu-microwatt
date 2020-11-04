@@ -12,7 +12,10 @@ use work.ppc_fx_insns.all;
 
 entity execute1 is
     generic (
-        EX1_BYPASS : boolean := true
+        EX1_BYPASS : boolean := true;
+        HAS_FPU : boolean := true;
+        -- Non-zero to enable log data collection
+        LOG_LENGTH : natural := 0
         );
     port (
 	clk   : in std_ulogic;
@@ -24,12 +27,14 @@ entity execute1 is
 
 	e_in  : in Decode2ToExecute1Type;
         l_in  : in Loadstore1ToExecute1Type;
+        fp_in : in FPUToExecute1Type;
 
 	ext_irq_in : std_ulogic;
 
 	-- asynchronous
         l_out : out Execute1ToLoadstore1Type;
 	f_out : out Execute1ToFetch1Type;
+        fp_out : out Execute1ToFPUType;
 
 	e_out : out Execute1ToWritebackType;
 
@@ -51,9 +56,13 @@ architecture behaviour of execute1 is
         f : Execute1ToFetch1Type;
         busy: std_ulogic;
         terminate: std_ulogic;
+        fp_exception_next : std_ulogic;
+        trace_next : std_ulogic;
+        prev_op : insn_type_t;
 	lr_update : std_ulogic;
 	next_lr : std_ulogic_vector(63 downto 0);
 	mul_in_progress : std_ulogic;
+        mul_finish : std_ulogic;
         div_in_progress : std_ulogic;
         cntz_in_progress : std_ulogic;
         slow_op_insn : insn_type_t;
@@ -67,7 +76,8 @@ architecture behaviour of execute1 is
     constant reg_type_init : reg_type :=
         (e => Execute1ToWritebackInit, f => Execute1ToFetch1Init,
          busy => '0', lr_update => '0', terminate => '0',
-         mul_in_progress => '0', div_in_progress => '0', cntz_in_progress => '0',
+         fp_exception_next => '0', trace_next => '0', prev_op => OP_ILLEGAL,
+         mul_in_progress => '0', mul_finish => '0', div_in_progress => '0', cntz_in_progress => '0',
          slow_op_insn => OP_ILLEGAL, slow_op_rc => '0', slow_op_oe => '0', slow_op_xerc => xerc_init,
          next_lr => (others => '0'), last_nia => (others => '0'), others => (others => '0'));
 
@@ -87,17 +97,21 @@ architecture behaviour of execute1 is
     signal countzero_result: std_ulogic_vector(63 downto 0);
 
     -- multiply signals
-    signal x_to_multiply: Execute1ToMultiplyType;
-    signal multiply_to_x: MultiplyToExecute1Type;
+    signal x_to_multiply: MultiplyInputType;
+    signal multiply_to_x: MultiplyOutputType;
 
     -- divider signals
     signal x_to_divider: Execute1ToDividerType;
     signal divider_to_x: DividerToExecute1Type;
 
+    -- random number generator signals
+    signal random_raw  : std_ulogic_vector(63 downto 0);
+    signal random_cond : std_ulogic_vector(63 downto 0);
+    signal random_err  : std_ulogic;
+
     -- signals for logging
     signal exception_log : std_ulogic;
     signal irq_valid_log : std_ulogic;
-    signal log_data : std_ulogic_vector(14 downto 0);
 
     type privilege_level is (USER, SUPER);
     type op_privilege_array is array(insn_type_t) of privilege_level;
@@ -157,6 +171,8 @@ architecture behaviour of execute1 is
 	    return '0';
 	when CA =>
 	    return xerc.ca;
+        when OV =>
+            return xerc.ov;
 	when ONE =>
 	    return '1';
 	end case;
@@ -182,6 +198,11 @@ architecture behaviour of execute1 is
 	msr_out(15 downto 0)  := msr(15 downto 0);
 	return msr_out;
     end;
+
+    -- Tell vivado to keep the hierarchy for the random module so that the
+    -- net names in the xdc file match.
+    attribute keep_hierarchy : string;
+    attribute keep_hierarchy of random_0 : label is "yes";
 
 begin
 
@@ -236,6 +257,14 @@ begin
             d_out => divider_to_x
             );
 
+    random_0: entity work.random
+        port map (
+            clk => clk,
+            data => random_cond,
+            raw => random_raw,
+            err => random_err
+            );
+
     dbg_msr_out <= ctrl.msr;
     log_rd_addr <= r.log_addr_spr;
 
@@ -243,7 +272,7 @@ begin
     b_in <= r.e.write_data when EX1_BYPASS and e_in.bypass_data2 = '1' else e_in.read_data2;
     c_in <= r.e.write_data when EX1_BYPASS and e_in.bypass_data3 = '1' else e_in.read_data3;
 
-    busy_out <= l_in.busy or r.busy;
+    busy_out <= l_in.busy or r.busy or fp_in.busy;
     valid_in <= e_in.valid and not busy_out;
 
     terminate_out <= r.terminate;
@@ -273,7 +302,7 @@ begin
 	variable a_inv : std_ulogic_vector(63 downto 0);
 	variable result : std_ulogic_vector(63 downto 0);
 	variable newcrf : std_ulogic_vector(3 downto 0);
-	variable result_with_carry : std_ulogic_vector(64 downto 0);
+	variable sum_with_carry : std_ulogic_vector(64 downto 0);
 	variable result_en : std_ulogic;
 	variable crnum : crnum_t;
 	variable crbit : integer range 0 to 31;
@@ -307,9 +336,12 @@ begin
         variable taken_branch : std_ulogic;
         variable abs_branch : std_ulogic;
         variable spr_val : std_ulogic_vector(63 downto 0);
+        variable addend : std_ulogic_vector(127 downto 0);
+        variable do_trace : std_ulogic;
+        variable fv : Execute1ToFPUType;
     begin
 	result := (others => '0');
-	result_with_carry := (others => '0');
+	sum_with_carry := (others => '0');
 	result_en := '0';
 	newcrf := (others => '0');
         is_branch := '0';
@@ -320,6 +352,7 @@ begin
 	v.e := Execute1ToWritebackInit;
         lv := Execute1ToLoadstore1Init;
         v.f.redirect := '0';
+        fv := Execute1ToFPUInit;
 
 	-- XER forwarding. To avoid having to track XER hazards, we
 	-- use the previously latched value.
@@ -370,6 +403,16 @@ begin
 	v.mul_in_progress := '0';
         v.div_in_progress := '0';
         v.cntz_in_progress := '0';
+        v.mul_finish := '0';
+
+        -- Main adder
+        if e_in.invert_a = '0' then
+            a_inv := a_in;
+        else
+            a_inv := not a_in;
+        end if;
+        sum_with_carry := ppc_adde(a_inv, b_in,
+                                   decode_input_carry(e_in.input_carry, v.e.xerc));
 
         -- signals to multiply and divide units
         sign1 := '0';
@@ -395,7 +438,7 @@ begin
             abs2 := - signed(b_in);
         end if;
 
-	x_to_multiply <= Execute1ToMultiplyInit;
+	x_to_multiply <= MultiplyInputInit;
 	x_to_multiply.is_32bit <= e_in.is_32bit;
 
         x_to_divider <= Execute1ToDividerInit;
@@ -405,7 +448,20 @@ begin
             x_to_divider.is_modulus <= '1';
         end if;
 
-        x_to_multiply.neg_result <= sign1 xor sign2;
+        addend := (others => '0');
+        if e_in.insn(26) = '0' then
+            -- integer multiply-add, major op 4 (if it is a multiply)
+            addend(63 downto 0) := c_in;
+            if e_in.is_signed = '1' then
+                addend(127 downto 64) := (others => c_in(63));
+            end if;
+        end if;
+        if (sign1 xor sign2) = '1' then
+            addend := not addend;
+        end if;
+
+        x_to_multiply.not_result <= sign1 xor sign2;
+        x_to_multiply.addend <= addend;
         x_to_divider.neg_result <= sign1 xor (sign2 and not x_to_divider.is_modulus);
         if e_in.is_32bit = '0' then
             -- 64-bit forms
@@ -450,9 +506,11 @@ begin
 	v.terminate := '0';
 	icache_inval <= '0';
 	v.busy := '0';
-        -- send MSR[IR] and ~MSR[PR] up to fetch1
+        -- send MSR[IR], ~MSR[PR], ~MSR[LE] and ~MSR[SF] up to fetch1
         v.f.virt_mode := ctrl.msr(MSR_IR);
         v.f.priv_mode := not ctrl.msr(MSR_PR);
+        v.f.big_endian := not ctrl.msr(MSR_LE);
+        v.f.mode_32bit := not ctrl.msr(MSR_SF);
 
 	-- Next insn adder used in a couple of places
 	next_nia := std_ulogic_vector(unsigned(e_in.nia) + 4);
@@ -470,9 +528,18 @@ begin
         exception_nextpc := '0';
         v.e.exc_write_enable := '0';
         v.e.exc_write_reg := fast_spr_num(SPR_SRR0);
-        v.e.exc_write_data := e_in.nia;
         if valid_in = '1' then
+            v.e.exc_write_data := e_in.nia;
             v.last_nia := e_in.nia;
+        else
+            v.e.exc_write_data := r.last_nia;
+        end if;
+
+        v.e.mode_32bit := not ctrl.msr(MSR_SF);
+
+        do_trace := valid_in and ctrl.msr(MSR_SE);
+        if valid_in = '1' then
+            v.prev_op := e_in.insn_type;
         end if;
 
  	if ctrl.irq_state = WRITE_SRR1 then
@@ -482,12 +549,40 @@ begin
             ctrl_tmp.msr(MSR_SF) <= '1';
             ctrl_tmp.msr(MSR_EE) <= '0';
             ctrl_tmp.msr(MSR_PR) <= '0';
+            ctrl_tmp.msr(MSR_SE) <= '0';
+            ctrl_tmp.msr(MSR_BE) <= '0';
+            ctrl_tmp.msr(MSR_FP) <= '0';
+            ctrl_tmp.msr(MSR_FE0) <= '0';
+            ctrl_tmp.msr(MSR_FE1) <= '0';
             ctrl_tmp.msr(MSR_IR) <= '0';
             ctrl_tmp.msr(MSR_DR) <= '0';
             ctrl_tmp.msr(MSR_RI) <= '0';
             ctrl_tmp.msr(MSR_LE) <= '1';
             v.e.valid := '1';
+            v.trace_next := '0';
+            v.fp_exception_next := '0';
 	    report "Writing SRR1: " & to_hstring(ctrl.srr1);
+
+        elsif valid_in = '1' and ((HAS_FPU and r.fp_exception_next = '1') or r.trace_next = '1') then
+            if HAS_FPU and r.fp_exception_next = '1' then
+                -- This is used for FP-type program interrupts that
+                -- become pending due to MSR[FE0,FE1] changing from 00 to non-zero.
+                v.f.redirect_nia := std_logic_vector(to_unsigned(16#700#, 64));
+                ctrl_tmp.srr1(63 - 43) <= '1';
+                ctrl_tmp.srr1(63 - 47) <= '1';
+            else
+                -- Generate a trace interrupt rather than executing the next instruction
+                -- or taking any asynchronous interrupt
+                v.f.redirect_nia := std_logic_vector(to_unsigned(16#d00#, 64));
+                ctrl_tmp.srr1(63 - 33) <= '1';
+                if r.prev_op = OP_LOAD or r.prev_op = OP_ICBI or r.prev_op = OP_ICBT or
+                    r.prev_op = OP_DCBT or r.prev_op = OP_DCBST or r.prev_op = OP_DCBF then
+                    ctrl_tmp.srr1(63 - 35) <= '1';
+                elsif r.prev_op = OP_STORE or r.prev_op = OP_DCBZ or r.prev_op = OP_DCBTST then
+                    ctrl_tmp.srr1(63 - 36) <= '1';
+                end if;
+            end if;
+            exception := '1';
 
 	elsif irq_valid = '1' and valid_in = '1' then
 	    -- we need two cycles to write srr0 and 1
@@ -504,7 +599,19 @@ begin
             -- set bit 45 to indicate privileged instruction type interrupt
             ctrl_tmp.srr1(63 - 45) <= '1';
             report "privileged instruction";
-            
+
+        elsif not HAS_FPU and valid_in = '1' and
+            (e_in.insn_type = OP_FPLOAD or e_in.insn_type = OP_FPSTORE) then
+            -- make lfd/stfd/lfs/stfs etc. illegal in no-FPU implementations
+            illegal := '1';
+
+        elsif HAS_FPU and valid_in = '1' and ctrl.msr(MSR_FP) = '0' and
+            (e_in.unit = FPU or e_in.insn_type = OP_FPLOAD or e_in.insn_type = OP_FPSTORE) then
+            -- generate a floating-point unavailable interrupt
+            exception := '1';
+            v.f.redirect_nia := std_logic_vector(to_unsigned(16#800#, 64));
+            report "FP unavailable interrupt";
+
 	elsif valid_in = '1' and e_in.unit = ALU then
 
 	    report "execute nia " & to_hstring(e_in.nia);
@@ -544,27 +651,26 @@ begin
                 else
                     illegal := '1';
                 end if;
-	    when OP_NOP =>
+	    when OP_NOP | OP_DCBF | OP_DCBST | OP_DCBT | OP_DCBTST | OP_ICBT =>
 		-- Do nothing
 	    when OP_ADD | OP_CMP | OP_TRAP =>
-		if e_in.invert_a = '0' then
-		    a_inv := a_in;
-		else
-		    a_inv := not a_in;
-		end if;
-		result_with_carry := ppc_adde(a_inv, b_in,
-					      decode_input_carry(e_in.input_carry, v.e.xerc));
-		result := result_with_carry(63 downto 0);
+		result := sum_with_carry(63 downto 0);
                 carry_32 := result(32) xor a_inv(32) xor b_in(32);
-                carry_64 := result_with_carry(64);
+                carry_64 := sum_with_carry(64);
                 if e_in.insn_type = OP_ADD then
                     if e_in.output_carry = '1' then
-                        set_carry(v.e, carry_32, carry_64);
+                        if e_in.input_carry /= OV then
+                            set_carry(v.e, carry_32, carry_64);
+                        else
+                            v.e.xerc.ov := carry_64;
+                            v.e.xerc.ov32 := carry_32;
+                            v.e.write_xerc_enable := '1';
+                        end if;
                     end if;
                     if e_in.oe = '1' then
                         set_ov(v.e,
-                               calc_ov(a_inv(63), b_in(63), carry_64, result_with_carry(63)),
-                               calc_ov(a_inv(31), b_in(31), carry_32, result_with_carry(31)));
+                               calc_ov(a_inv(63), b_in(63), carry_64, sum_with_carry(63)),
+                               calc_ov(a_inv(31), b_in(31), carry_32, sum_with_carry(31)));
                     end if;
                     result_en := '1';
                 else
@@ -619,23 +725,56 @@ begin
                         end loop;
                     else
                         -- trap instructions (tw, twi, td, tdi)
+                        v.f.redirect_nia := std_logic_vector(to_unsigned(16#700#, 64));
+                        -- set bit 46 to say trap occurred
+                        ctrl_tmp.srr1(63 - 46) <= '1';
                         if or (trapval and insn_to(e_in.insn)) = '1' then
                             -- generate trap-type program interrupt
                             exception := '1';
-                            v.f.redirect_nia := std_logic_vector(to_unsigned(16#700#, 64));
-                            -- set bit 46 to say trap occurred
-                            ctrl_tmp.srr1(63 - 46) <= '1';
                             report "trap";
                         end if;
                     end if;
                 end if;
-	    when OP_AND | OP_OR | OP_XOR | OP_POPCNT | OP_PRTY | OP_CMPB | OP_EXTS =>
+            when OP_ADDG6S =>
+                result := (others => '0');
+                for i in 0 to 14 loop
+                    lo := i * 4;
+                    hi := (i + 1) * 4;
+                    if (a_in(hi) xor b_in(hi) xor sum_with_carry(hi)) = '0' then
+                        result(lo + 3 downto lo) := "0110";
+                    end if;
+                end loop;
+                if sum_with_carry(64) = '0' then
+                    result(63 downto 60) := "0110";
+                end if;
+                result_en := '1';
+            when OP_CMPRB =>
+                newcrf := ppc_cmprb(a_in, b_in, insn_l(e_in.insn));
+                bf := insn_bf(e_in.insn);
+                crnum := to_integer(unsigned(bf));
+                v.e.write_cr_enable := '1';
+                v.e.write_cr_mask := num_to_fxm(crnum);
+                v.e.write_cr_data := newcrf & newcrf & newcrf & newcrf &
+                                     newcrf & newcrf & newcrf & newcrf;
+            when OP_CMPEQB =>
+                newcrf := ppc_cmpeqb(a_in, b_in);
+                bf := insn_bf(e_in.insn);
+                crnum := to_integer(unsigned(bf));
+                v.e.write_cr_enable := '1';
+                v.e.write_cr_mask := num_to_fxm(crnum);
+                v.e.write_cr_data := newcrf & newcrf & newcrf & newcrf &
+                                     newcrf & newcrf & newcrf & newcrf;
+            when OP_AND | OP_OR | OP_XOR | OP_POPCNT | OP_PRTY | OP_CMPB | OP_EXTS |
+                    OP_BPERM | OP_BCD =>
 		result := logical_result;
 		result_en := '1';
 	    when OP_B =>
                 is_branch := '1';
                 taken_branch := '1';
                 abs_branch := insn_aa(e_in.insn);
+                if ctrl.msr(MSR_BE) = '1' then
+                    do_trace := '1';
+                end if;
 	    when OP_BC =>
 		-- read_data1 is CTR
 		bo := insn_bo(e_in.insn);
@@ -648,6 +787,9 @@ begin
                 is_branch := '1';
 		taken_branch := ppc_bc_taken(bo, bi, cr_in, a_in);
                 abs_branch := insn_aa(e_in.insn);
+                if ctrl.msr(MSR_BE) = '1' then
+                    do_trace := '1';
+                end if;
 	    when OP_BCREG =>
 		-- read_data1 is CTR
 		-- read_data2 is target register (CTR, LR or TAR)
@@ -661,10 +803,15 @@ begin
                 is_branch := '1';
 		taken_branch := ppc_bc_taken(bo, bi, cr_in, a_in);
                 abs_branch := '1';
+                if ctrl.msr(MSR_BE) = '1' then
+                    do_trace := '1';
+                end if;
 
 	    when OP_RFID =>
                 v.f.virt_mode := a_in(MSR_IR) or a_in(MSR_PR);
                 v.f.priv_mode := not a_in(MSR_PR);
+                v.f.big_endian := not a_in(MSR_LE);
+                v.f.mode_32bit := not a_in(MSR_SF);
                 -- Can't use msr_copy here because the partial function MSR
                 -- bits should be left unchanged, not zeroed.
                 ctrl_tmp.msr(63 downto 31) <= a_in(63 downto 31);
@@ -679,6 +826,11 @@ begin
                 is_branch := '1';
                 taken_branch := '1';
                 abs_branch := '1';
+                if HAS_FPU then
+                    v.fp_exception_next := fp_in.exception and
+                                           (a_in(MSR_FE0) or a_in(MSR_FE1));
+                end if;
+                do_trace := '0';
 
             when OP_CNTZ =>
                 v.e.valid := '0';
@@ -735,6 +887,28 @@ begin
 			end if;
 		    end loop;
 		end if;
+            when OP_MCRXRX =>
+                newcrf := v.e.xerc.ov & v.e.xerc.ca & v.e.xerc.ov32 & v.e.xerc.ca32;
+                bf := insn_bf(e_in.insn);
+                crnum := to_integer(unsigned(bf));
+                v.e.write_cr_enable := '1';
+                v.e.write_cr_mask := num_to_fxm(crnum);
+                v.e.write_cr_data := newcrf & newcrf & newcrf & newcrf &
+                                     newcrf & newcrf & newcrf & newcrf;
+            when OP_DARN =>
+                if random_err = '0' then
+                    case e_in.insn(17 downto 16) is
+                        when "00" =>
+                            result := x"00000000" & random_cond(31 downto 0);
+                        when "10" =>
+                            result := random_raw;
+                        when others =>
+                            result := random_cond;
+                    end case;
+                else
+                    result := (others => '1');
+                end if;
+                result_en := '1';
 	    when OP_MFMSR =>
 		result := ctrl.msr;
 		result_en := '1';
@@ -766,6 +940,9 @@ begin
 			spr_val := ctrl.dec;
                     when SPR_CFAR =>
                         spr_val := ctrl.cfar;
+                    when SPR_PVR =>
+                        spr_val(63 downto 32) := (others => '0');
+                        spr_val(31 downto 0) := PVR_MICROWATT;
                     when 724 =>     -- LOG_ADDR SPR
                         spr_val := log_wr_addr & r.log_addr_spr;
                     when 725 =>     -- LOG_DATA SPR
@@ -824,6 +1001,10 @@ begin
                         ctrl_tmp.msr(MSR_IR) <= '1';
                         ctrl_tmp.msr(MSR_DR) <= '1';
                     end if;
+                    if HAS_FPU then
+                        v.fp_exception_next := fp_in.exception and
+                                               (c_in(MSR_FE0) or c_in(MSR_FE1));
+                    end if;
                 end if;
 	    when OP_MTSPR =>
 		report "MTSPR to SPR " & integer'image(decode_spr_num(e_in.insn)) &
@@ -860,6 +1041,15 @@ begin
 		    set_carry(v.e, rotator_carry, rotator_carry);
 		end if;
 		result_en := '1';
+            when OP_SETB =>
+                bfa := insn_bfa(e_in.insn);
+                crbit := to_integer(unsigned(bfa)) * 4;
+                result := (others => '0');
+                if cr_in(31 - crbit) = '1' then
+                    result := (others => '1');
+                elsif cr_in(30 - crbit) = '1' then
+                    result(0) := '1';
+                end if;
 
 	    when OP_ISYNC =>
 		v.f.redirect := '1';
@@ -929,6 +1119,10 @@ begin
             -- instruction for other units, i.e. LDST
             if e_in.unit = LDST then
                 lv.valid := '1';
+            elsif e_in.unit = NONE then
+                illegal := '1';
+            elsif HAS_FPU and e_in.unit = FPU then
+                fv.valid := '1';
             end if;
 
         elsif r.f.redirect = '1' then
@@ -942,9 +1136,9 @@ begin
             -- cnt[lt]z always takes two cycles
             result := countzero_result;
             result_en := '1';
-            v.e.write_reg := gpr_to_gspr(v.slow_op_dest);
-            v.e.rc := v.slow_op_rc;
-            v.e.xerc := v.slow_op_xerc;
+            v.e.write_reg := gpr_to_gspr(r.slow_op_dest);
+            v.e.rc := r.slow_op_rc;
+            v.e.xerc := r.slow_op_xerc;
             v.e.valid := '1';
 	elsif r.mul_in_progress = '1' or r.div_in_progress = '1' then
 	    if (r.mul_in_progress = '1' and multiply_to_x.valid = '1') or
@@ -960,34 +1154,60 @@ begin
                         when others =>
                             -- i.e. OP_MUL_L64
                             result := multiply_to_x.result(63 downto 0);
-                            overflow := multiply_to_x.overflow;
                     end case;
 		else
 		    result := divider_to_x.write_reg_data;
 		    overflow := divider_to_x.overflow;
 		end if;
-		result_en := '1';
-		v.e.write_reg := gpr_to_gspr(v.slow_op_dest);
-		v.e.rc := v.slow_op_rc;
-		v.e.xerc := v.slow_op_xerc;
-		v.e.write_xerc_enable := v.slow_op_oe;
-		-- We must test oe because the RC update code in writeback
-		-- will use the xerc value to set CR0:SO so we must not clobber
-		-- xerc if OE wasn't set.
-		if v.slow_op_oe = '1' then
-		    v.e.xerc.ov := overflow;
-		    v.e.xerc.ov32 := overflow;
-		    v.e.xerc.so := v.slow_op_xerc.so or overflow;
-		end if;
-		v.e.valid := '1';
+                if r.mul_in_progress = '1' and r.slow_op_oe = '1' then
+                    -- have to wait until next cycle for overflow indication
+                    v.mul_finish := '1';
+                    v.busy := '1';
+                else
+                    result_en := '1';
+                    v.e.write_reg := gpr_to_gspr(r.slow_op_dest);
+                    v.e.rc := r.slow_op_rc;
+                    v.e.xerc := r.slow_op_xerc;
+                    v.e.write_xerc_enable := r.slow_op_oe;
+                    -- We must test oe because the RC update code in writeback
+                    -- will use the xerc value to set CR0:SO so we must not clobber
+                    -- xerc if OE wasn't set.
+                    if r.slow_op_oe = '1' then
+                        v.e.xerc.ov := overflow;
+                        v.e.xerc.ov32 := overflow;
+                        v.e.xerc.so := r.slow_op_xerc.so or overflow;
+                    end if;
+                    v.e.valid := '1';
+                end if;
 	    else
 		v.busy := '1';
 		v.mul_in_progress := r.mul_in_progress;
 		v.div_in_progress := r.div_in_progress;
 	    end if;
+        elsif r.mul_finish = '1' then
+            result := r.e.write_data;
+            result_en := '1';
+            v.e.write_reg := gpr_to_gspr(r.slow_op_dest);
+            v.e.rc := r.slow_op_rc;
+            v.e.xerc := r.slow_op_xerc;
+            v.e.write_xerc_enable := r.slow_op_oe;
+            v.e.xerc.ov := multiply_to_x.overflow;
+            v.e.xerc.ov32 := multiply_to_x.overflow;
+            v.e.xerc.so := r.slow_op_xerc.so or multiply_to_x.overflow;
+            v.e.valid := '1';
 	end if;
 
-        if illegal = '1' then
+        -- Generate FP-type program interrupt.  fp_in.interrupt will only
+        -- be set during the execution of a FP instruction.
+        -- The case where MSR[FE0,FE1] goes from zero to non-zero is
+        -- handled above by mtmsrd and rfid setting v.fp_exception_next.
+        if HAS_FPU and fp_in.interrupt = '1' then
+            v.f.redirect_nia := std_logic_vector(to_unsigned(16#700#, 64));
+            ctrl_tmp.srr1(63 - 43) <= '1';
+            exception := '1';
+        end if;
+
+        if illegal = '1' or (HAS_FPU and fp_in.illegal = '1') then
             exception := '1';
             v.f.redirect_nia := std_logic_vector(to_unsigned(16#700#, 64));
             -- Since we aren't doing Hypervisor emulation assist (0xe40) we
@@ -1002,13 +1222,19 @@ begin
             end if;
 	end if;
 
+        if do_trace = '1' then
+            v.trace_next := '1';
+        end if;
+
 	v.e.write_data := result;
 	v.e.write_enable := result_en and not exception;
 
         -- generate DSI or DSegI for load/store exceptions
         -- or ISI or ISegI for instruction fetch exceptions
         if l_in.exception = '1' then
-            if l_in.instr_fault = '0' then
+            if l_in.alignment = '1' then
+                v.f.redirect_nia := std_logic_vector(to_unsigned(16#600#, 64));
+            elsif l_in.instr_fault = '0' then
                 if l_in.segment_fault = '0' then
                     v.f.redirect_nia := std_logic_vector(to_unsigned(16#300#, 64));
                 else
@@ -1027,7 +1253,6 @@ begin
             end if;
             v.e.exc_write_enable := '1';
             v.e.exc_write_reg := fast_spr_num(SPR_SRR0);
-            v.e.exc_write_data := r.last_nia;
             report "ldst exception writing srr0=" & to_hstring(r.last_nia);
         end if;
 
@@ -1036,6 +1261,9 @@ begin
             v.f.redirect := '1';
             v.f.virt_mode := '0';
             v.f.priv_mode := '1';
+            -- XXX need an interrupt LE bit here, e.g. from LPCR
+            v.f.big_endian := '0';
+            v.f.mode_32bit := '0';
         end if;
 
         if v.f.redirect = '1' then
@@ -1049,9 +1277,9 @@ begin
         lv.addr1 := a_in;
         lv.addr2 := b_in;
         lv.data := c_in;
-        lv.write_reg := gspr_to_gpr(e_in.write_reg);
+        lv.write_reg := e_in.write_reg;
         lv.length := e_in.data_len;
-        lv.byte_reverse := e_in.byte_reverse;
+        lv.byte_reverse := e_in.byte_reverse xnor ctrl.msr(MSR_LE);
         lv.sign_extend := e_in.sign_extend;
         lv.update := e_in.update;
         lv.update_reg := gspr_to_gpr(e_in.read_reg1);
@@ -1066,6 +1294,21 @@ begin
         end if;
         lv.virt_mode := ctrl.msr(MSR_DR);
         lv.priv_mode := not ctrl.msr(MSR_PR);
+        lv.mode_32bit := not ctrl.msr(MSR_SF);
+        lv.is_32bit := e_in.is_32bit;
+
+        -- Outputs to FPU
+        fv.op := e_in.insn_type;
+        fv.nia := e_in.nia;
+        fv.insn := e_in.insn;
+        fv.single := e_in.is_32bit;
+        fv.fe_mode := ctrl.msr(MSR_FE0) & ctrl.msr(MSR_FE1);
+        fv.fra := a_in;
+        fv.frb := b_in;
+        fv.frc := c_in;
+        fv.frt := e_in.write_reg;
+        fv.rc := e_in.rc;
+        fv.out_cr := e_in.output_cr;
 
 	-- Update registers
 	rin <= v;
@@ -1074,27 +1317,32 @@ begin
 	f_out <= r.f;
         l_out <= lv;
 	e_out <= r.e;
+        fp_out <= fv;
 	flush_out <= f_out.redirect;
 
         exception_log <= exception;
         irq_valid_log <= irq_valid;
     end process;
 
-    ex1_log : process(clk)
+    e1_log: if LOG_LENGTH > 0 generate
+        signal log_data : std_ulogic_vector(14 downto 0);
     begin
-        if rising_edge(clk) then
-            log_data <= ctrl.msr(MSR_EE) & ctrl.msr(MSR_PR) &
-                        ctrl.msr(MSR_IR) & ctrl.msr(MSR_DR) &
-                        exception_log &
-                        irq_valid_log &
-                        std_ulogic_vector(to_unsigned(irq_state_t'pos(ctrl.irq_state), 1)) &
-                        "000" &
-                        r.e.write_enable &
-                        r.e.valid &
-                        f_out.redirect &
-                        r.busy &
-                        flush_out;
-        end if;
-    end process;
-    log_out <= log_data;
+        ex1_log : process(clk)
+        begin
+            if rising_edge(clk) then
+                log_data <= ctrl.msr(MSR_EE) & ctrl.msr(MSR_PR) &
+                            ctrl.msr(MSR_IR) & ctrl.msr(MSR_DR) &
+                            exception_log &
+                            irq_valid_log &
+                            std_ulogic_vector(to_unsigned(irq_state_t'pos(ctrl.irq_state), 1)) &
+                            "000" &
+                            r.e.write_enable &
+                            r.e.valid &
+                            f_out.redirect &
+                            r.busy &
+                            flush_out;
+            end if;
+        end process;
+        log_out <= log_data;
+    end generate;
 end architecture behaviour;
