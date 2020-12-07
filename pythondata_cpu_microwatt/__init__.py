@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post885"
-version_tuple = (0, 0, 885)
+version_str = "0.0.post888"
+version_tuple = (0, 0, 888)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post885")
+    pversion = V("0.0.post888")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post819"
-data_version_tuple = (0, 0, 819)
+data_version_str = "0.0.post822"
+data_version_tuple = (0, 0, 822)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post819")
+    pdata_version = V("0.0.post822")
 except ImportError:
     pass
-data_git_hash = "16da9b5ba7702e8d34f6354b86b36c7e9bf471ea"
-data_git_describe = "v0.0-819-g16da9b5"
+data_git_hash = "77c03e5d42d8821b2f8b74bc0fe5cc418b022a10"
+data_git_describe = "v0.0-822-g77c03e5"
 data_git_msg = """\
-commit 16da9b5ba7702e8d34f6354b86b36c7e9bf471ea
-Merge: b60026e 29fabeb
+commit 77c03e5d42d8821b2f8b74bc0fe5cc418b022a10
+Merge: 605010e bc4e6b7
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Dec 1 11:25:08 2020 +1100
+Date:   Mon Dec 7 16:20:09 2020 +1100
 
-    Merge pull request #249 from paulusmack/master
+    Merge pull request #252 from antonblanchard/hello-world-in-8k
     
-    Sundry bug fixes, plus implement mtmsr
+    Reduce hello_world footprint to fit in 8kB
 
 """
 
