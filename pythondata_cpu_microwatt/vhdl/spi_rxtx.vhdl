@@ -177,6 +177,7 @@ begin
                 sck_send <= '0';
                 sck_recv <= '0';
                 clk_div  <= 0;
+                counter := 0;
             elsif counter = clk_div then
                 counter := 0;
 
@@ -257,12 +258,16 @@ begin
     count_bit: process(clk)
     begin
         if rising_edge(clk) then
-            if start_cmd = '1' then
-                bit_count <= cmd_clks_i;
-            elsif state /= DATA then
-                bit_count <= (others => '1');
-            elsif sck_recv = '1' then
-                bit_count <= std_ulogic_vector(unsigned(bit_count) - 1);
+            if rst = '1' then
+                bit_count <= (others => '0');
+            else
+                if start_cmd = '1' then
+                    bit_count <= cmd_clks_i;
+                elsif state /= DATA then
+                    bit_count <= (others => '1');
+                elsif sck_recv = '1' then
+                    bit_count <= std_ulogic_vector(unsigned(bit_count) - 1);
+                end if;
             end if;
         end if;
     end process;
