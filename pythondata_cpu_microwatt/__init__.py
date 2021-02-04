@@ -4,11 +4,11 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post922"
-version_tuple = (0, 0, 922)
+version_str = "0.0.post924"
+version_tuple = (0, 0, 924)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post922")
+    pversion = V("0.0.post924")
 except ImportError:
     pass
 
@@ -35,11 +35,11 @@ Date:   Thu Jan 7 14:47:11 2021 +1100
 """
 
 # Tool version info
-tool_version_str = "0.0.post74"
-tool_version_tuple = (0, 0, 74)
+tool_version_str = "0.0.post76"
+tool_version_tuple = (0, 0, 76)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post74")
+    ptool_version = V("0.0.post76")
 except ImportError:
     pass
 
