@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post937"
-version_tuple = (0, 0, 937)
+version_str = "0.0.post955"
+version_tuple = (0, 0, 955)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post937")
+    pversion = V("0.0.post955")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post848"
-data_version_tuple = (0, 0, 848)
+data_version_str = "0.0.post866"
+data_version_tuple = (0, 0, 866)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post848")
+    pdata_version = V("0.0.post866")
 except ImportError:
     pass
-data_git_hash = "5f8279a14ab2921df91babd684f6a4991c59ac29"
-data_git_describe = "v0.0-848-g5f8279a"
+data_git_hash = "7652452367c634e85146d565fd6296572ce77c11"
+data_git_describe = "v0.0-866-g7652452"
 data_git_msg = """\
-commit 5f8279a14ab2921df91babd684f6a4991c59ac29
-Merge: 45b7312 740f013
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Thu Jan 7 14:47:11 2021 +1100
+commit 7652452367c634e85146d565fd6296572ce77c11
+Merge: c4e3ade 481f3cd
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Mon Feb 8 14:34:53 2021 +1100
 
-    Merge pull request #263 from antonblanchard/reset-pid
+    Merge pull request #273 from antonblanchard/wishbone-checking
     
-    Initialize PID register
+    Add some wishbone checking
 
 """
 
