@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post955"
-version_tuple = (0, 0, 955)
+version_str = "0.0.post965"
+version_tuple = (0, 0, 965)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post955")
+    pversion = V("0.0.post965")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post866"
-data_version_tuple = (0, 0, 866)
+data_version_str = "0.0.post876"
+data_version_tuple = (0, 0, 876)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post866")
+    pdata_version = V("0.0.post876")
 except ImportError:
     pass
-data_git_hash = "7652452367c634e85146d565fd6296572ce77c11"
-data_git_describe = "v0.0-866-g7652452"
+data_git_hash = "9a6a7e9fe5711b0d3fd0b62d98b3f80b9bf6394e"
+data_git_describe = "v0.0-876-g9a6a7e9"
 data_git_msg = """\
-commit 7652452367c634e85146d565fd6296572ce77c11
-Merge: c4e3ade 481f3cd
+commit 9a6a7e9fe5711b0d3fd0b62d98b3f80b9bf6394e
+Merge: 7652452 0fb207b
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Feb 8 14:34:53 2021 +1100
+Date:   Mon Feb 8 16:38:57 2021 +1100
 
-    Merge pull request #273 from antonblanchard/wishbone-checking
+    Merge pull request #268 from paulusmack/btc
     
-    Add some wishbone checking
+    Implement branch target cache
 
 """
 
