@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post965"
-version_tuple = (0, 0, 965)
+version_str = "0.0.post979"
+version_tuple = (0, 0, 979)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post965")
+    pversion = V("0.0.post979")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post876"
-data_version_tuple = (0, 0, 876)
+data_version_str = "0.0.post890"
+data_version_tuple = (0, 0, 890)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post876")
+    pdata_version = V("0.0.post890")
 except ImportError:
     pass
-data_git_hash = "9a6a7e9fe5711b0d3fd0b62d98b3f80b9bf6394e"
-data_git_describe = "v0.0-876-g9a6a7e9"
+data_git_hash = "6c7689052dbd76b5fe7c9f4804d6a4817e9845af"
+data_git_describe = "v0.0-890-g6c76890"
 data_git_msg = """\
-commit 9a6a7e9fe5711b0d3fd0b62d98b3f80b9bf6394e
-Merge: 7652452 0fb207b
+commit 6c7689052dbd76b5fe7c9f4804d6a4817e9845af
+Merge: 9a6a7e9 17fd069
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Feb 8 16:38:57 2021 +1100
+Date:   Mon Feb 8 17:27:16 2021 +1100
 
-    Merge pull request #268 from paulusmack/btc
+    Merge pull request #269 from paulusmack/pipeline
     
-    Implement branch target cache
+    Rework load/store pipeline to achieve one load/store per cycle throughput
 
 """
 
