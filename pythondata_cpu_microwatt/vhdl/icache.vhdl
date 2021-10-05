@@ -46,8 +46,6 @@ entity icache is
         TLB_SIZE : positive := 64;
         -- L1 ITLB log_2(page_size)
         TLB_LG_PGSZ : positive := 12;
-        -- Number of real address bits that we store
-        REAL_ADDR_BITS : positive := 56;
         -- Non-zero to enable log data collection
         LOG_LENGTH : natural := 0
         );
@@ -68,6 +66,9 @@ entity icache is
         wishbone_out : out wishbone_master_out;
         wishbone_in  : in wishbone_slave_out;
 
+        wb_snoop_in  : in wishbone_master_out := wishbone_master_out_init;
+
+        events       : out IcacheEventType;
         log_out      : out std_ulogic_vector(53 downto 0)
         );
 end entity icache;
@@ -168,7 +169,7 @@ architecture rtl of icache is
     signal eaa_priv  : std_ulogic;
 
     -- Cache reload state machine
-    type state_t is (IDLE, CLR_TAG, WAIT_ACK);
+    type state_t is (IDLE, STOP_RELOAD, CLR_TAG, WAIT_ACK);
 
     type reg_internal_t is record
 	-- Cache hit state (Latches for 1 cycle BRAM access)
@@ -195,6 +196,8 @@ architecture rtl of icache is
 
     signal r : reg_internal_t;
 
+    signal ev : IcacheEventType;
+
     -- Async signals on incoming request
     signal req_index   : index_t;
     signal req_row     : row_t;
@@ -202,10 +205,10 @@ architecture rtl of icache is
     signal req_tag     : cache_tag_t;
     signal req_is_hit  : std_ulogic;
     signal req_is_miss : std_ulogic;
-    signal req_laddr   : std_ulogic_vector(63 downto 0);
+    signal req_raddr   : real_addr_t;
 
     signal tlb_req_index : tlb_index_t;
-    signal real_addr     : std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
+    signal real_addr     : real_addr_t;
     signal ra_valid      : std_ulogic;
     signal priv_fault    : std_ulogic;
     signal access_ok     : std_ulogic;
@@ -220,14 +223,19 @@ architecture rtl of icache is
     signal plru_victim : plru_out_t;
     signal replace_way : way_t;
 
+    -- Memory write snoop signals
+    signal snoop_valid : std_ulogic;
+    signal snoop_index : index_t;
+    signal snoop_hits  : cache_way_valids_t;
+
     -- Return the cache line index (tag index) for an address
-    function get_index(addr: std_ulogic_vector(63 downto 0)) return index_t is
+    function get_index(addr: std_ulogic_vector) return index_t is
     begin
         return to_integer(unsigned(addr(SET_SIZE_BITS - 1 downto LINE_OFF_BITS)));
     end;
 
     -- Return the cache row index (data memory) for an address
-    function get_row(addr: std_ulogic_vector(63 downto 0)) return row_t is
+    function get_row(addr: std_ulogic_vector) return row_t is
     begin
         return to_integer(unsigned(addr(SET_SIZE_BITS - 1 downto ROW_OFF_BITS)));
     end;
@@ -241,9 +249,9 @@ architecture rtl of icache is
     end;
 
     -- Returns whether this is the last row of a line
-    function is_last_row_addr(addr: wishbone_addr_type; last: row_in_line_t) return boolean is
+    function is_last_row_wb_addr(wb_addr: wishbone_addr_type; last: row_in_line_t) return boolean is
     begin
-	return unsigned(addr(LINE_OFF_BITS-1 downto ROW_OFF_BITS)) = last;
+	return unsigned(wb_addr(LINE_OFF_BITS - ROW_OFF_BITS - 1 downto 0)) = last;
     end;
 
     -- Returns whether this is the last row of a line
@@ -253,16 +261,16 @@ architecture rtl of icache is
     end;
 
     -- Return the address of the next row in the current cache line
-    function next_row_addr(addr: wishbone_addr_type)
+    function next_row_wb_addr(wb_addr: wishbone_addr_type)
 	return std_ulogic_vector is
 	variable row_idx : std_ulogic_vector(ROW_LINEBITS-1 downto 0);
 	variable result  : wishbone_addr_type;
     begin
 	-- Is there no simpler way in VHDL to generate that 3 bits adder ?
-	row_idx := addr(LINE_OFF_BITS-1 downto ROW_OFF_BITS);
+	row_idx := wb_addr(ROW_LINEBITS - 1 downto 0);
 	row_idx := std_ulogic_vector(unsigned(row_idx) + 1);
-	result := addr;
-	result(LINE_OFF_BITS-1 downto ROW_OFF_BITS) := row_idx;
+	result := wb_addr;
+	result(ROW_LINEBITS - 1 downto 0) := row_idx;
 	return result;
     end;
 
@@ -291,10 +299,9 @@ architecture rtl of icache is
     end;
 
     -- Get the tag value from the address
-    function get_tag(addr: std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
-                     endian: std_ulogic) return cache_tag_t is
+    function get_tag(addr: real_addr_t; endian: std_ulogic) return cache_tag_t is
     begin
-        return endian & addr(REAL_ADDR_BITS - 1 downto SET_SIZE_BITS);
+        return endian & addr(addr'left downto SET_SIZE_BITS);
     end;
 
     -- Read a tag from a tag memory row
@@ -458,7 +465,7 @@ begin
             end if;
             eaa_priv <= pte(3);
         else
-            real_addr <= i_in.nia(REAL_ADDR_BITS - 1 downto 0);
+            real_addr <= addr_to_real(i_in.nia);
             ra_valid <= '1';
             eaa_priv <= '1';
         end if;
@@ -487,6 +494,7 @@ begin
                 itlb_ptes(wr_index) <= m_in.pte;
                 itlb_valids(wr_index) <= '1';
             end if;
+            ev.itlb_miss_resolved <= m_in.tlbld and not rst;
         end if;
     end process;
 
@@ -513,8 +521,7 @@ begin
 	-- Calculate address of beginning of cache row, will be
 	-- used for cache miss processing if needed
 	--
-	req_laddr <= (63 downto REAL_ADDR_BITS => '0') &
-                     real_addr(REAL_ADDR_BITS - 1 downto ROW_OFF_BITS) &
+	req_raddr <= real_addr(REAL_ADDR_BITS - 1 downto ROW_OFF_BITS) &
 		     (ROW_OFF_BITS-1 downto 0 => '0');
 
 	-- Test if pending request is a hit on any way
@@ -535,7 +542,7 @@ begin
 	end loop;
 
 	-- Generate the "hit" and "miss" signals for the synchronous blocks
-        if i_in.req = '1' and access_ok = '1' and flush_in = '0' and rst = '0' then
+        if i_in.req = '1' and access_ok = '1' and flush_in = '0' and rst = '0' and use_previous = '0' then
             req_is_hit  <= is_hit;
             req_is_miss <= not is_hit;
         else
@@ -566,9 +573,10 @@ begin
         i_out.fetch_failed <= r.fetch_failed;
         i_out.big_endian <= r.big_endian;
         i_out.next_predicted <= i_in.predicted;
+        i_out.next_pred_ntaken <= i_in.pred_ntaken;
 
 	-- Stall fetch1 if we have a miss on cache or TLB or a protection fault
-	stall_out <= not (is_hit and access_ok);
+	stall_out <= not (is_hit and access_ok) and not use_previous;
 
 	-- Wishbone requests output (from the cache miss reload machine)
 	wishbone_out <= r.wb;
@@ -614,9 +622,13 @@ begin
     -- Cache miss/reload synchronous machine
     icache_miss : process(clk)
 	variable tagset    : cache_tags_set_t;
-	variable stbs_done : boolean;
+        variable tag       : cache_tag_t;
+        variable snoop_addr : real_addr_t;
+        variable snoop_tag : cache_tag_t;
+        variable snoop_cache_tags : cache_tags_set_t;
     begin
         if rising_edge(clk) then
+            ev.icache_miss <= '0';
 	    -- On reset, clear all valid bits to force misses
             if rst = '1' then
 		for i in index_t loop
@@ -633,13 +645,42 @@ begin
 
 		-- Not useful normally but helps avoiding tons of sim warnings
 		r.wb.adr <= (others => '0');
+
+                snoop_valid <= '0';
+                snoop_index <= 0;
+                snoop_hits <= (others => '0');
             else
+                -- Detect snooped writes and decode address into index and tag
+                -- Since we never write, any write should be snooped
+                snoop_valid <= wb_snoop_in.cyc and wb_snoop_in.stb and wb_snoop_in.we;
+                snoop_addr := addr_to_real(wb_to_addr(wb_snoop_in.adr));
+                snoop_index <= get_index(snoop_addr);
+                snoop_cache_tags := cache_tags(get_index(snoop_addr));
+                snoop_tag := get_tag(snoop_addr, '0');
+                snoop_hits <= (others => '0');
+                for i in way_t loop
+                    tag := read_tag(i, snoop_cache_tags);
+                    -- Ignore endian bit in comparison
+                    tag(TAG_BITS - 1) := '0';
+                    if tag = snoop_tag then
+                        snoop_hits(i) <= '1';
+                    end if;
+                end loop;
+
                 -- Process cache invalidations
                 if inval_in = '1' then
                     for i in index_t loop
                         cache_valids(i) <= (others => '0');
                     end loop;
                     r.store_valid <= '0';
+                else
+                    -- Do invalidations from snooped stores to memory, one
+                    -- cycle after the address appears on wb_snoop_in.
+                    for i in way_t loop
+                        if snoop_valid = '1' and snoop_hits(i) = '1' then
+                            cache_valids(snoop_index)(i) <= '0';
+                        end if;
+                    end loop;
                 end if;
 
 		-- Main state machine
@@ -659,18 +700,19 @@ begin
 			    " way:" & integer'image(replace_way) &
 			    " tag:" & to_hstring(req_tag) &
                             " RA:" & to_hstring(real_addr);
+                        ev.icache_miss <= '1';
 
 			-- Keep track of our index and way for subsequent stores
 			r.store_index <= req_index;
-			r.store_row <= get_row(req_laddr);
+			r.store_row <= get_row(req_raddr);
                         r.store_tag <= req_tag;
                         r.store_valid <= '1';
-                        r.end_row_ix <= get_row_of_line(get_row(req_laddr)) - 1;
+                        r.end_row_ix <= get_row_of_line(get_row(req_raddr)) - 1;
 
 			-- Prep for first wishbone read. We calculate the address of
 			-- the start of the cache line and start the WB cycle.
 			--
-			r.wb.adr <= req_laddr(r.wb.adr'left downto 0);
+			r.wb.adr <= addr_to_wb(req_raddr);
 			r.wb.cyc <= '1';
 			r.wb.stb <= '1';
 
@@ -697,29 +739,30 @@ begin
 
                         r.state <= WAIT_ACK;
                     end if;
-		    -- Requests are all sent if stb is 0
-		    stbs_done := r.wb.stb = '0';
 
 		    -- If we are still sending requests, was one accepted ?
-		    if wishbone_in.stall = '0' and not stbs_done then
-			-- That was the last word ? We are done sending. Clear
-			-- stb and set stbs_done so we can handle an eventual last
-			-- ack on the same cycle.
+		    if wishbone_in.stall = '0' and r.wb.stb = '1' then
+			-- That was the last word ? We are done sending. Clear stb.
 			--
-			if is_last_row_addr(r.wb.adr, r.end_row_ix) then
+			if is_last_row_wb_addr(r.wb.adr, r.end_row_ix) then
 			    r.wb.stb <= '0';
-			    stbs_done := true;
 			end if;
 
 			-- Calculate the next row address
-			r.wb.adr <= next_row_addr(r.wb.adr);
+			r.wb.adr <= next_row_wb_addr(r.wb.adr);
 		    end if;
+
+                    -- Abort reload if we get an invalidation
+                    if inval_in = '1' then
+                        r.wb.stb <= '0';
+                        r.state <= STOP_RELOAD;
+                    end if;
 
 		    -- Incoming acks processing
 		    if wishbone_in.ack = '1' then
-                        r.rows_valid(r.store_row mod ROW_PER_LINE) <= '1';
+                        r.rows_valid(r.store_row mod ROW_PER_LINE) <= not inval_in;
 			-- Check for completion
-			if stbs_done and is_last_row(r.store_row, r.end_row_ix) then
+			if is_last_row(r.store_row, r.end_row_ix) then
 			    -- Complete wishbone cycle
 			    r.wb.cyc <= '0';
 
@@ -730,6 +773,18 @@ begin
 			    r.state <= IDLE;
 			end if;
 
+			-- Increment store row counter
+			r.store_row <= next_row(r.store_row);
+		    end if;
+
+                when STOP_RELOAD =>
+                    -- Wait for all outstanding requests to be satisfied, then
+                    -- go to IDLE state.
+                    if get_row_of_line(r.store_row) = get_row_of_line(get_row(wb_to_addr(r.wb.adr))) then
+                        r.wb.cyc <= '0';
+                        r.state <= IDLE;
+                    end if;
+                    if wishbone_in.ack = '1' then
 			-- Increment store row counter
 			r.store_row <= next_row(r.store_row);
 		    end if;
@@ -762,7 +817,7 @@ begin
                 log_data <= i_out.valid &
                             i_out.insn &
                             wishbone_in.ack &
-                            r.wb.adr(5 downto 3) &
+                            r.wb.adr(2 downto 0) &
                             r.wb.stb & r.wb.cyc &
                             wishbone_in.stall &
                             stall_out &

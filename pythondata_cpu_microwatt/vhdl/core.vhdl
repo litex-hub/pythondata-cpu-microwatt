@@ -13,6 +13,7 @@ entity core is
         EX1_BYPASS : boolean := true;
         HAS_FPU : boolean := true;
         HAS_BTC : boolean := true;
+        HAS_SHORT_MULT : boolean := false;
 	ALT_RESET_ADDRESS : std_ulogic_vector(63 downto 0) := (others => '0');
         LOG_LENGTH : natural := 512;
         ICACHE_NUM_LINES : natural := 64;
@@ -36,6 +37,8 @@ entity core is
 
         wishbone_data_in  : in wishbone_slave_out;
         wishbone_data_out : out wishbone_master_out;
+
+        wb_snoop_in     : in wishbone_master_out;
 
 	dmi_addr	: in std_ulogic_vector(3 downto 0);
 	dmi_din	        : in std_ulogic_vector(63 downto 0);
@@ -145,6 +148,12 @@ architecture behave of core is
 
     signal msr : std_ulogic_vector(63 downto 0);
 
+    -- PMU event bus
+    signal icache_events    : IcacheEventType;
+    signal loadstore_events : Loadstore1EventType;
+    signal dcache_events    : DcacheEventType;
+    signal writeback_events : WritebackEventType;
+
     -- Debug status
     signal dbg_core_is_stopped: std_ulogic;
 
@@ -241,6 +250,8 @@ begin
 	    stall_out => icache_stall_out,
             wishbone_out => wishbone_insn_out,
             wishbone_in => wishbone_insn_in,
+            wb_snoop_in => wb_snoop_in,
+            events => icache_events,
             log_out => log_data(96 downto 43)
             );
 
@@ -330,6 +341,7 @@ begin
         generic map (
             EX1_BYPASS => EX1_BYPASS,
             HAS_FPU => HAS_FPU,
+            HAS_SHORT_MULT => HAS_SHORT_MULT,
             LOG_LENGTH => LOG_LENGTH
             )
         port map (
@@ -349,6 +361,10 @@ begin
             bypass_cr_data => execute1_cr_bypass,
 	    icache_inval => ex1_icache_inval,
             dbg_msr_out => msr,
+            wb_events => writeback_events,
+            ls_events => loadstore_events,
+            dc_events => dcache_events,
+            ic_events => icache_events,
             terminate_out => terminate,
             log_out => log_data(134 downto 120),
             log_rd_addr => log_rd_addr,
@@ -390,6 +406,7 @@ begin
             m_out => loadstore1_to_mmu,
             m_in => mmu_to_loadstore1,
             dc_stall => dcache_stall_out,
+            events => loadstore_events,
             log_out => log_data(149 downto 140)
             );
 
@@ -423,6 +440,8 @@ begin
             stall_out => dcache_stall_out,
             wishbone_in => wishbone_data_in,
             wishbone_out => wishbone_data_out,
+            snoop_in => wb_snoop_in,
+            events => dcache_events,
             log_out => log_data(170 downto 151)
             );
 
@@ -437,6 +456,7 @@ begin
             w_out => writeback_to_register_file,
             c_out => writeback_to_cr_file,
             f_out => writeback_to_fetch1,
+            events => writeback_events,
             interrupt_out => do_interrupt,
             complete_out => complete
             );

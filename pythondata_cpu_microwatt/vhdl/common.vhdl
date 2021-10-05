@@ -21,6 +21,7 @@ package common is
     constant MSR_FE1 : integer := (63 - 55);    -- Floating Exception mode
     constant MSR_IR  : integer := (63 - 58);    -- Instruction Relocation
     constant MSR_DR  : integer := (63 - 59);    -- Data Relocation
+    constant MSR_PMM : integer := (63 - 61);    -- Performance Monitor Mark
     constant MSR_RI  : integer := (63 - 62);    -- Recoverable Interrupt
     constant MSR_LE  : integer := (63 - 63);    -- Little Endian
 
@@ -51,8 +52,36 @@ package common is
     constant SPR_HSPRG0 : spr_num_t := 304;
     constant SPR_HSPRG1 : spr_num_t := 305;
     constant SPR_PID    : spr_num_t := 48;
-    constant SPR_PRTBL  : spr_num_t := 720;
+    constant SPR_PTCR   : spr_num_t := 464;
     constant SPR_PVR	: spr_num_t := 287;
+
+    -- PMU registers
+    constant SPR_UPMC1  : spr_num_t := 771;
+    constant SPR_UPMC2  : spr_num_t := 772;
+    constant SPR_UPMC3  : spr_num_t := 773;
+    constant SPR_UPMC4  : spr_num_t := 774;
+    constant SPR_UPMC5  : spr_num_t := 775;
+    constant SPR_UPMC6  : spr_num_t := 776;
+    constant SPR_UMMCR0 : spr_num_t := 779;
+    constant SPR_UMMCR1 : spr_num_t := 782;
+    constant SPR_UMMCR2 : spr_num_t := 769;
+    constant SPR_UMMCRA : spr_num_t := 770;
+    constant SPR_USIER  : spr_num_t := 768;
+    constant SPR_USIAR  : spr_num_t := 780;
+    constant SPR_USDAR  : spr_num_t := 781;
+    constant SPR_PMC1   : spr_num_t := 787;
+    constant SPR_PMC2   : spr_num_t := 788;
+    constant SPR_PMC3   : spr_num_t := 789;
+    constant SPR_PMC4   : spr_num_t := 790;
+    constant SPR_PMC5   : spr_num_t := 791;
+    constant SPR_PMC6   : spr_num_t := 792;
+    constant SPR_MMCR0  : spr_num_t := 795;
+    constant SPR_MMCR1  : spr_num_t := 798;
+    constant SPR_MMCR2  : spr_num_t := 785;
+    constant SPR_MMCRA  : spr_num_t := 786;
+    constant SPR_SIER   : spr_num_t := 784;
+    constant SPR_SIAR   : spr_num_t := 796;
+    constant SPR_SDAR   : spr_num_t := 797;
 
     -- GPR indices in the register file (GPR only)
     subtype gpr_index_t is std_ulogic_vector(4 downto 0);
@@ -127,6 +156,12 @@ package common is
     constant FPSCR_NI     : integer := 63 - 61;
     constant FPSCR_RN     : integer := 63 - 63;
 
+    -- Real addresses
+    -- REAL_ADDR_BITS is the number of real address bits that we store
+    constant REAL_ADDR_BITS : positive := 56;
+    subtype real_addr_t is std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
+    function addr_to_real(addr: std_ulogic_vector(63 downto 0)) return real_addr_t;
+
     -- Used for tracking instruction completion and pending register writes
     constant TAG_COUNT : positive := 4;
     constant TAG_NUMBER_BITS : natural := log2(TAG_COUNT);
@@ -167,6 +202,7 @@ package common is
 	stop_mark: std_ulogic;
         sequential: std_ulogic;
         predicted : std_ulogic;
+        pred_ntaken : std_ulogic;
 	nia: std_ulogic_vector(63 downto 0);
     end record;
 
@@ -178,6 +214,12 @@ package common is
 	insn: std_ulogic_vector(31 downto 0);
         big_endian: std_ulogic;
         next_predicted: std_ulogic;
+        next_pred_ntaken: std_ulogic;
+    end record;
+
+    type IcacheEventType is record
+        icache_miss : std_ulogic;
+        itlb_miss_resolved : std_ulogic;
     end record;
 
     type Decode1ToDecode2Type is record
@@ -303,6 +345,51 @@ package common is
                                                               is_extended => '0', is_modulus => '0',
                                                               neg_result => '0', others => (others => '0'));
 
+    type PMUEventType is record
+        no_instr_avail      : std_ulogic;
+        dispatch            : std_ulogic;
+        ext_interrupt       : std_ulogic;
+        instr_complete      : std_ulogic;
+        fp_complete         : std_ulogic;
+        ld_complete         : std_ulogic;
+        st_complete         : std_ulogic;
+        br_taken_complete   : std_ulogic;
+        br_mispredict       : std_ulogic;
+        ipref_discard       : std_ulogic;
+        itlb_miss           : std_ulogic;
+        itlb_miss_resolved  : std_ulogic;
+        icache_miss         : std_ulogic;
+        dc_miss_resolved    : std_ulogic;
+        dc_load_miss        : std_ulogic;
+        dc_ld_miss_resolved : std_ulogic;
+        dc_store_miss       : std_ulogic;
+        dtlb_miss           : std_ulogic;
+        dtlb_miss_resolved  : std_ulogic;
+        ld_miss_nocache     : std_ulogic;
+        ld_fill_nocache     : std_ulogic;
+    end record;
+    constant PMUEventInit : PMUEventType := (others => '0');
+
+    type Execute1ToPMUType is record
+        mfspr   : std_ulogic;
+        mtspr   : std_ulogic;
+        spr_num : std_ulogic_vector(4 downto 0);
+        spr_val : std_ulogic_vector(63 downto 0);
+        tbbits  : std_ulogic_vector(3 downto 0);        -- event bits from timebase
+        pmm_msr : std_ulogic;                           -- PMM bit from MSR
+        pr_msr  : std_ulogic;                           -- PR bit from MSR
+        run     : std_ulogic;
+        nia     : std_ulogic_vector(63 downto 0);
+        addr    : std_ulogic_vector(63 downto 0);
+        addr_v  : std_ulogic;
+        occur   : PMUEventType;
+    end record;
+
+    type PMUToExecute1Type is record
+        spr_val : std_ulogic_vector(63 downto 0);
+        intr    : std_ulogic;
+    end record;
+
     type Decode2ToRegisterFileType is record
 	read1_enable : std_ulogic;
 	read1_reg : gspr_index_t;
@@ -369,6 +456,7 @@ package common is
     type Loadstore1ToExecute1Type is record
         busy : std_ulogic;
         in_progress : std_ulogic;
+        interrupt : std_ulogic;
     end record;
 
     type Loadstore1ToDcacheType is record
@@ -393,6 +481,14 @@ package common is
         store_done : std_ulogic;
         error : std_ulogic;
         cache_paradox : std_ulogic;
+    end record;
+
+    type DcacheEventType is record
+        load_miss          : std_ulogic;
+        store_miss         : std_ulogic;
+        dcache_refill      : std_ulogic;
+        dtlb_miss          : std_ulogic;
+        dtlb_miss_resolved : std_ulogic;
     end record;
 
     type Loadstore1ToMmuType is record
@@ -463,6 +559,12 @@ package common is
          xerc => xerc_init, rc => '0', store_done => '0',
          interrupt => '0', intr_vec => 0,
          srr0 => (others => '0'), srr1 => (others => '0'));
+
+    type Loadstore1EventType is record
+        load_complete  : std_ulogic;
+        store_complete : std_ulogic;
+        itlb_miss      : std_ulogic;
+    end record;
 
     type Execute1ToWritebackType is record
 	valid: std_ulogic;
@@ -594,6 +696,11 @@ package common is
 							       write_cr_mask => (others => '0'),
 							       write_cr_data => (others => '0'));
 
+    type WritebackEventType is record
+        instr_complete : std_ulogic;
+        fp_complete    : std_ulogic;
+    end record;
+
 end common;
 
 package body common is
@@ -677,5 +784,10 @@ package body common is
     function tag_match(tag1 : instr_tag_t; tag2 : instr_tag_t) return boolean is
     begin
         return tag1.valid = '1' and tag2.valid = '1' and tag1.tag = tag2.tag;
+    end;
+
+    function addr_to_real(addr: std_ulogic_vector(63 downto 0)) return real_addr_t is
+    begin
+        return addr(real_addr_t'range);
     end;
 end common;

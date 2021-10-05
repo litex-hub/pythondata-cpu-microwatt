@@ -125,7 +125,7 @@ static bool check_flash(void)
 
 	/* Supported flash types for quad mode */
 	if (id[0] == 0x01 &&
-	    (id[1] == 0x02 || id[1] == 0x20) &&
+	    (id[1] == 0x02 || id[1] == 0x20 || id[1] == 0x60) &&
 	    (id[2] == 0x18 || id[2] == 0x19)) {
 		check_spansion_quad_mode();
 		quad = true;
@@ -262,6 +262,8 @@ uint64_t main(void)
 		printf("SPIFLASH ");
 	if (ftr & SYS_REG_INFO_HAS_LITEETH)
 		printf("ETHERNET ");
+	if (ftr & SYS_REG_INFO_HAS_LITESDCARD)
+		printf("SDCARD ");
 	printf("\n");
 	if (ftr & SYS_REG_INFO_HAS_BRAM) {
 		val = readq(SYSCON_BASE + SYS_REG_BRAMINFO) & SYS_REG_BRAMINFO_SIZE_MASK;
@@ -286,7 +288,7 @@ uint64_t main(void)
 	if (ftr & SYS_REG_INFO_HAS_DRAM) {
 		printf("LiteDRAM built from Migen %s and LiteX %s\n",
 		       MIGEN_GIT_SHA1, LITEX_GIT_SHA1);
-		sdrinit();
+		sdram_init();
 	}
 	if (ftr & SYS_REG_INFO_HAS_BRAM) {
 		printf("Booting from BRAM...\n");

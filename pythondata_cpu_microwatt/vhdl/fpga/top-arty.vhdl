@@ -16,6 +16,7 @@ entity toplevel is
         CLK_FREQUENCY      : positive := 100000000;
         HAS_FPU            : boolean  := true;
         HAS_BTC            : boolean  := true;
+        HAS_SHORT_MULT     : boolean  := false;
         USE_LITEDRAM       : boolean  := false;
         NO_BRAM            : boolean  := false;
         DISABLE_FLATTEN_CORE : boolean := false;
@@ -26,7 +27,10 @@ entity toplevel is
         LOG_LENGTH         : natural := 512;
         USE_LITEETH        : boolean  := false;
         UART_IS_16550      : boolean  := false;
-        HAS_UART1          : boolean  := true
+        HAS_UART1          : boolean  := true;
+        USE_LITESDCARD     : boolean := false;
+        HAS_GPIO           : boolean := true;
+        NGPIO              : natural := 32
         );
     port(
         ext_clk   : in  std_ulogic;
@@ -35,12 +39,6 @@ entity toplevel is
         -- UART0 signals:
         uart_main_tx : out std_ulogic;
         uart_main_rx : in  std_ulogic;
-
-	-- UART1 signals:
-	uart_pmod_tx    : out std_ulogic;
-	uart_pmod_rx    : in std_ulogic;
-	uart_pmod_cts_n : in std_ulogic;
-	uart_pmod_rts_n : out std_ulogic;
 
         -- LEDs
         led0_b  : out std_ulogic;
@@ -59,6 +57,9 @@ entity toplevel is
         spi_flash_wp_n   : inout std_ulogic;
         spi_flash_hold_n : inout std_ulogic;
 
+        -- GPIO
+        shield_io        : inout std_ulogic_vector(44 downto 0);
+
         -- Ethernet
         eth_ref_clk      : out std_ulogic;
         eth_clocks_tx    : in std_ulogic;
@@ -73,6 +74,12 @@ entity toplevel is
         eth_tx_data      : out std_ulogic_vector(3 downto 0);
         eth_col          : in std_ulogic;
         eth_crs          : in std_ulogic;
+
+        -- SD card
+        sdcard_data   : inout std_ulogic_vector(3 downto 0);
+        sdcard_cmd    : inout std_ulogic;
+        sdcard_clk    : out   std_ulogic;
+        sdcard_cd     : in    std_ulogic;
 
         -- DRAM wires
         ddram_a       : out std_ulogic_vector(13 downto 0);
@@ -110,6 +117,7 @@ architecture behaviour of toplevel is
     signal wb_ext_is_dram_csr  : std_ulogic;
     signal wb_ext_is_dram_init : std_ulogic;
     signal wb_ext_is_eth       : std_ulogic;
+    signal wb_ext_is_sdcard    : std_ulogic;
 
     -- DRAM main data wishbone connection
     signal wb_dram_in          : wishbone_master_out;
@@ -121,6 +129,16 @@ architecture behaviour of toplevel is
     -- LiteEth connection
     signal ext_irq_eth         : std_ulogic;
     signal wb_eth_out          : wb_io_slave_out := wb_io_slave_out_init;
+
+    -- LiteSDCard connection
+    signal ext_irq_sdcard      : std_ulogic := '0';
+    signal wb_sdcard_out       : wb_io_slave_out := wb_io_slave_out_init;
+    signal wb_sddma_out        : wb_io_master_out := wb_io_master_out_init;
+    signal wb_sddma_in         : wb_io_slave_out;
+    signal wb_sddma_nr         : wb_io_master_out;
+    signal wb_sddma_ir         : wb_io_slave_out;
+    -- for conversion from non-pipelined wishbone to pipelined
+    signal wb_sddma_stb_sent   : std_ulogic;
 
     -- Control/status
     signal core_alt_reset : std_ulogic;
@@ -139,6 +157,11 @@ architecture behaviour of toplevel is
     signal spi_sdat_o  : std_ulogic_vector(3 downto 0);
     signal spi_sdat_oe : std_ulogic_vector(3 downto 0);
     signal spi_sdat_i  : std_ulogic_vector(3 downto 0);
+
+    -- GPIO
+    signal gpio_in     : std_ulogic_vector(NGPIO - 1 downto 0);
+    signal gpio_out    : std_ulogic_vector(NGPIO - 1 downto 0);
+    signal gpio_dir    : std_ulogic_vector(NGPIO - 1 downto 0);
 
     -- Fixup various memory sizes based on generics
     function get_bram_size return natural is
@@ -172,6 +195,7 @@ begin
             CLK_FREQ           => CLK_FREQUENCY,
             HAS_FPU            => HAS_FPU,
             HAS_BTC            => HAS_BTC,
+            HAS_SHORT_MULT     => HAS_SHORT_MULT,
             HAS_DRAM           => USE_LITEDRAM,
             DRAM_SIZE          => 256 * 1024 * 1024,
             DRAM_INIT_SIZE     => PAYLOAD_SIZE,
@@ -184,7 +208,10 @@ begin
             LOG_LENGTH         => LOG_LENGTH,
             HAS_LITEETH        => USE_LITEETH,
             UART0_IS_16550     => UART_IS_16550,
-            HAS_UART1          => HAS_UART1
+            HAS_UART1          => HAS_UART1,
+            HAS_SD_CARD        => USE_LITESDCARD,
+            HAS_GPIO           => HAS_GPIO,
+            NGPIO              => NGPIO
             )
         port map (
             -- System signals
@@ -196,8 +223,8 @@ begin
             uart0_rxd         => uart_main_rx,
 
 	    -- UART1 signals
-	    uart1_txd         => uart_pmod_tx,
-	    uart1_rxd         => uart_pmod_rx,
+	    --uart1_txd         => uart_pmod_tx,
+	    --uart1_rxd         => uart_pmod_rx,
 
             -- SPI signals
             spi_flash_sck     => spi_sck,
@@ -206,21 +233,35 @@ begin
             spi_flash_sdat_oe => spi_sdat_oe,
             spi_flash_sdat_i  => spi_sdat_i,
 
+            -- GPIO signals
+            gpio_in           => gpio_in,
+            gpio_out          => gpio_out,
+            gpio_dir          => gpio_dir,
+
             -- External interrupts
             ext_irq_eth       => ext_irq_eth,
+            ext_irq_sdcard    => ext_irq_sdcard,
 
             -- DRAM wishbone
             wb_dram_in           => wb_dram_in,
             wb_dram_out          => wb_dram_out,
+
+            -- IO wishbone
             wb_ext_io_in         => wb_ext_io_in,
             wb_ext_io_out        => wb_ext_io_out,
             wb_ext_is_dram_csr   => wb_ext_is_dram_csr,
             wb_ext_is_dram_init  => wb_ext_is_dram_init,
             wb_ext_is_eth        => wb_ext_is_eth,
+            wb_ext_is_sdcard     => wb_ext_is_sdcard,
+
+            -- DMA wishbone
+            wishbone_dma_in      => wb_sddma_in,
+            wishbone_dma_out     => wb_sddma_out,
+
             alt_reset            => core_alt_reset
             );
 
-    uart_pmod_rts_n <= '0';
+    --uart_pmod_rts_n <= '0';
 
     -- SPI Flash
     --
@@ -511,7 +552,7 @@ begin
         wb_eth_cyc <= wb_ext_io_in.cyc and wb_ext_is_eth;
 
         -- Remove top address bits as liteeth decoder doesn't know about them
-        wb_eth_adr <= x"000" & "000" & wb_ext_io_in.adr(16 downto 2);
+        wb_eth_adr <= x"000" & "000" & wb_ext_io_in.adr(14 downto 0);
 
         -- LiteETH isn't pipelined
         wb_eth_out.stall <= not wb_eth_out.ack;
@@ -523,8 +564,113 @@ begin
         ext_irq_eth    <= '0';
     end generate;
 
+    -- SD card pmod
+    has_sdcard : if USE_LITESDCARD generate
+        component litesdcard_core port (
+            clk           : in    std_ulogic;
+            rst           : in    std_ulogic;
+            -- wishbone for accessing control registers
+            wb_ctrl_adr   : in    std_ulogic_vector(29 downto 0);
+            wb_ctrl_dat_w : in    std_ulogic_vector(31 downto 0);
+            wb_ctrl_dat_r : out   std_ulogic_vector(31 downto 0);
+            wb_ctrl_sel   : in    std_ulogic_vector(3 downto 0);
+            wb_ctrl_cyc   : in    std_ulogic;
+            wb_ctrl_stb   : in    std_ulogic;
+            wb_ctrl_ack   : out   std_ulogic;
+            wb_ctrl_we    : in    std_ulogic;
+            wb_ctrl_cti   : in    std_ulogic_vector(2 downto 0);
+            wb_ctrl_bte   : in    std_ulogic_vector(1 downto 0);
+            wb_ctrl_err   : out   std_ulogic;
+            -- wishbone for SD card core to use for DMA
+            wb_dma_adr    : out   std_ulogic_vector(29 downto 0);
+            wb_dma_dat_w  : out   std_ulogic_vector(31 downto 0);
+            wb_dma_dat_r  : in    std_ulogic_vector(31 downto 0);
+            wb_dma_sel    : out   std_ulogic_vector(3 downto 0);
+            wb_dma_cyc    : out   std_ulogic;
+            wb_dma_stb    : out   std_ulogic;
+            wb_dma_ack    : in    std_ulogic;
+            wb_dma_we     : out   std_ulogic;
+            wb_dma_cti    : out   std_ulogic_vector(2 downto 0);
+            wb_dma_bte    : out   std_ulogic_vector(1 downto 0);
+            wb_dma_err    : in    std_ulogic;
+            -- connections to SD card
+            sdcard_data   : inout std_ulogic_vector(3 downto 0);
+            sdcard_cmd    : inout std_ulogic;
+            sdcard_clk    : out   std_ulogic;
+            sdcard_cd     : in    std_ulogic;
+            irq           : out   std_ulogic
+            );
+        end component;
+
+        signal wb_sdcard_cyc : std_ulogic;
+        signal wb_sdcard_adr : std_ulogic_vector(29 downto 0);
+
+    begin
+        litesdcard : litesdcard_core
+            port map (
+                clk           => system_clk,
+                rst           => soc_rst,
+                wb_ctrl_adr   => wb_sdcard_adr,
+                wb_ctrl_dat_w => wb_ext_io_in.dat,
+                wb_ctrl_dat_r => wb_sdcard_out.dat,
+                wb_ctrl_sel   => wb_ext_io_in.sel,
+                wb_ctrl_cyc   => wb_sdcard_cyc,
+                wb_ctrl_stb   => wb_ext_io_in.stb,
+                wb_ctrl_ack   => wb_sdcard_out.ack,
+                wb_ctrl_we    => wb_ext_io_in.we,
+                wb_ctrl_cti   => "000",
+                wb_ctrl_bte   => "00",
+                wb_ctrl_err   => open,
+                wb_dma_adr    => wb_sddma_nr.adr,
+                wb_dma_dat_w  => wb_sddma_nr.dat,
+                wb_dma_dat_r  => wb_sddma_ir.dat,
+                wb_dma_sel    => wb_sddma_nr.sel,
+                wb_dma_cyc    => wb_sddma_nr.cyc,
+                wb_dma_stb    => wb_sddma_nr.stb,
+                wb_dma_ack    => wb_sddma_ir.ack,
+                wb_dma_we     => wb_sddma_nr.we,
+                wb_dma_cti    => open,
+                wb_dma_bte    => open,
+                wb_dma_err    => '0',
+                sdcard_data   => sdcard_data,
+                sdcard_cmd    => sdcard_cmd,
+                sdcard_clk    => sdcard_clk,
+                sdcard_cd     => sdcard_cd,
+                irq           => ext_irq_sdcard
+                );
+
+        -- Gate cyc with chip select from SoC
+        wb_sdcard_cyc <= wb_ext_io_in.cyc and wb_ext_is_sdcard;
+
+        wb_sdcard_adr <= x"0000" & wb_ext_io_in.adr(13 downto 0);
+
+        wb_sdcard_out.stall <= not wb_sdcard_out.ack;
+
+        -- Convert non-pipelined DMA wishbone to pipelined by suppressing
+        -- non-acknowledged strobes
+        process(system_clk)
+        begin
+            if rising_edge(system_clk) then
+                wb_sddma_out <= wb_sddma_nr;
+                if wb_sddma_stb_sent = '1' or
+                    (wb_sddma_out.stb = '1' and wb_sddma_in.stall = '0') then
+                    wb_sddma_out.stb <= '0';
+                end if;
+                if wb_sddma_nr.cyc = '0' or wb_sddma_ir.ack = '1' then
+                    wb_sddma_stb_sent <= '0';
+                elsif wb_sddma_in.stall = '0' then
+                    wb_sddma_stb_sent <= wb_sddma_nr.stb;
+                end if;
+                wb_sddma_ir <= wb_sddma_in;
+            end if;
+        end process;
+
+    end generate;
+
     -- Mux WB response on the IO bus
-    wb_ext_io_out <= wb_eth_out when wb_ext_is_eth = '1' else wb_dram_ctrl_out;
+    wb_ext_io_out <= wb_eth_out when wb_ext_is_eth = '1' else
+                     wb_sdcard_out when wb_ext_is_sdcard = '1' else
+                     wb_dram_ctrl_out;
 
     leds_pwm : process(system_clk)
     begin
@@ -545,6 +691,72 @@ begin
     led4 <= system_clk_locked;
     led5 <= eth_clk_locked;
     led6 <= not soc_rst;
-    led7 <= not spi_flash_cs_n;
+
+    -- GPIO
+    gpio_in(0) <= shield_io(0);
+    gpio_in(1) <= shield_io(1);
+    gpio_in(2) <= shield_io(2);
+    gpio_in(3) <= shield_io(3);
+    gpio_in(4) <= shield_io(4);
+    gpio_in(5) <= shield_io(5);
+    gpio_in(6) <= shield_io(6);
+    gpio_in(7) <= shield_io(7);
+    gpio_in(8) <= shield_io(8);
+    gpio_in(9) <= shield_io(9);
+    gpio_in(10) <= shield_io(10);
+    gpio_in(11) <= shield_io(11);
+    gpio_in(12) <= shield_io(12);
+    gpio_in(13) <= shield_io(13);
+    gpio_in(14) <= shield_io(26);
+    gpio_in(15) <= shield_io(27);
+    gpio_in(16) <= shield_io(28);
+    gpio_in(17) <= shield_io(29);
+    gpio_in(18) <= shield_io(30);
+    gpio_in(19) <= shield_io(31);
+    gpio_in(20) <= shield_io(32);
+    gpio_in(21) <= shield_io(33);
+    gpio_in(22) <= shield_io(34);
+    gpio_in(23) <= shield_io(35);
+    gpio_in(24) <= shield_io(36);
+    gpio_in(25) <= shield_io(37);
+    gpio_in(26) <= shield_io(38);
+    gpio_in(27) <= shield_io(39);
+    gpio_in(28) <= shield_io(40);
+    gpio_in(29) <= shield_io(41);
+    gpio_in(30) <= shield_io(43);
+    gpio_in(31) <= shield_io(44);
+
+    shield_io(0) <= gpio_out(0) when gpio_dir(0) = '1' else 'Z';
+    shield_io(1) <= gpio_out(1) when gpio_dir(1) = '1' else 'Z';
+    shield_io(2) <= gpio_out(2) when gpio_dir(2) = '1' else 'Z';
+    shield_io(3) <= gpio_out(3) when gpio_dir(3) = '1' else 'Z';
+    shield_io(4) <= gpio_out(4) when gpio_dir(4) = '1' else 'Z';
+    shield_io(5) <= gpio_out(5) when gpio_dir(5) = '1' else 'Z';
+    shield_io(6) <= gpio_out(6) when gpio_dir(6) = '1' else 'Z';
+    shield_io(7) <= gpio_out(7) when gpio_dir(7) = '1' else 'Z';
+    shield_io(8) <= gpio_out(8) when gpio_dir(8) = '1' else 'Z';
+    shield_io(9) <= gpio_out(9) when gpio_dir(9) = '1' else 'Z';
+    shield_io(10) <= gpio_out(10) when gpio_dir(10) = '1' else 'Z';
+    shield_io(11) <= gpio_out(11) when gpio_dir(11) = '1' else 'Z';
+    shield_io(12) <= gpio_out(12) when gpio_dir(12) = '1' else 'Z';
+    shield_io(13) <= gpio_out(13) when gpio_dir(13) = '1' else 'Z';
+    shield_io(26) <= gpio_out(14) when gpio_dir(14) = '1' else 'Z';
+    shield_io(27) <= gpio_out(15) when gpio_dir(15) = '1' else 'Z';
+    shield_io(28) <= gpio_out(16) when gpio_dir(16) = '1' else 'Z';
+    shield_io(29) <= gpio_out(17) when gpio_dir(17) = '1' else 'Z';
+    shield_io(30) <= gpio_out(18) when gpio_dir(18) = '1' else 'Z';
+    shield_io(31) <= gpio_out(19) when gpio_dir(19) = '1' else 'Z';
+    shield_io(32) <= gpio_out(20) when gpio_dir(20) = '1' else 'Z';
+    shield_io(33) <= gpio_out(21) when gpio_dir(21) = '1' else 'Z';
+    shield_io(34) <= gpio_out(22) when gpio_dir(22) = '1' else 'Z';
+    shield_io(35) <= gpio_out(23) when gpio_dir(23) = '1' else 'Z';
+    shield_io(36) <= gpio_out(24) when gpio_dir(24) = '1' else 'Z';
+    shield_io(37) <= gpio_out(25) when gpio_dir(25) = '1' else 'Z';
+    shield_io(38) <= gpio_out(26) when gpio_dir(26) = '1' else 'Z';
+    shield_io(39) <= gpio_out(27) when gpio_dir(27) = '1' else 'Z';
+    shield_io(40) <= gpio_out(28) when gpio_dir(28) = '1' else 'Z';
+    shield_io(41) <= gpio_out(29) when gpio_dir(29) = '1' else 'Z';
+    shield_io(43) <= gpio_out(30) when gpio_dir(30) = '1' else 'Z';
+    shield_io(44) <= gpio_out(31) when gpio_dir(31) = '1' else 'Z';
 
 end architecture behaviour;

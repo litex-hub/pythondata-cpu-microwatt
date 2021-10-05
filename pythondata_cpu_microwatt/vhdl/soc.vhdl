@@ -24,6 +24,7 @@ use work.wishbone_types.all;
 -- 0xc0004000: XICS ICP
 -- 0xc0005000: XICS ICS
 -- 0xc0006000: SPI Flash controller
+-- 0xc0007000: GPIO controller
 -- 0xc8nnnnnn: External IO bus
 -- 0xf0000000: Flash "ROM" mapping
 -- 0xff000000: DRAM init code (if any) or flash ROM (**)
@@ -32,6 +33,7 @@ use work.wishbone_types.all;
 -- 0xc8000000: LiteDRAM control (CSRs)
 -- 0xc8020000: LiteEth CSRs (*)
 -- 0xc8030000: LiteEth MMIO (*)
+-- 0xc8040000: LiteSDCard CSRs
 
 -- (*) LiteEth must be a single aligned 32KB block as the CSRs and MMIOs
 --     are actually decoded as a single wishbone which LiteEth will
@@ -45,6 +47,9 @@ use work.wishbone_types.all;
 --
 --   0  : UART0
 --   1  : Ethernet
+--   2  : UART1
+--   3  : SD card
+--   4  : GPIO
 
 entity soc is
     generic (
@@ -54,6 +59,7 @@ entity soc is
 	SIM                : boolean;
         HAS_FPU            : boolean := true;
         HAS_BTC            : boolean := true;
+        HAS_SHORT_MULT     : boolean := false;
 	DISABLE_FLATTEN_CORE : boolean := false;
 	HAS_DRAM           : boolean  := false;
 	DRAM_SIZE          : integer := 0;
@@ -74,7 +80,10 @@ entity soc is
         DCACHE_NUM_LINES   : natural := 64;
         DCACHE_NUM_WAYS    : natural := 2;
         DCACHE_TLB_SET_SIZE : natural := 64;
-        DCACHE_TLB_NUM_WAYS : natural := 2
+        DCACHE_TLB_NUM_WAYS : natural := 2;
+        HAS_SD_CARD        : boolean := false;
+        HAS_GPIO           : boolean := false;
+        NGPIO              : natural := 32
 	);
     port(
 	rst          : in  std_ulogic;
@@ -90,9 +99,15 @@ entity soc is
 	wb_ext_is_dram_csr   : out std_ulogic;
 	wb_ext_is_dram_init  : out std_ulogic;
 	wb_ext_is_eth        : out std_ulogic;
+	wb_ext_is_sdcard     : out std_ulogic;
+
+        -- external DMA wishbone with 32-bit data/address
+        wishbone_dma_in      : out wb_io_slave_out := wb_io_slave_out_init;
+        wishbone_dma_out     : in wb_io_master_out := wb_io_master_out_init;
 
         -- External interrupts
         ext_irq_eth          : in std_ulogic := '0';
+        ext_irq_sdcard       : in std_ulogic := '0';
 
 	-- UART0 signals:
 	uart0_txd    : out std_ulogic;
@@ -109,6 +124,11 @@ entity soc is
         spi_flash_sdat_oe : out std_ulogic_vector(SPI_FLASH_DLINES-1 downto 0);
         spi_flash_sdat_i  : in  std_ulogic_vector(SPI_FLASH_DLINES-1 downto 0) := (others => '1');
 
+        -- GPIO signals
+        gpio_out : out std_ulogic_vector(NGPIO - 1 downto 0);
+        gpio_dir : out std_ulogic_vector(NGPIO - 1 downto 0);
+        gpio_in  : in  std_ulogic_vector(NGPIO - 1 downto 0) := (others => '0');
+
 	-- DRAM controller signals
 	alt_reset    : in std_ulogic := '0'
 	);
@@ -121,18 +141,19 @@ architecture behaviour of soc is
     signal wishbone_dcore_out : wishbone_master_out;
     signal wishbone_icore_in  : wishbone_slave_out;
     signal wishbone_icore_out : wishbone_master_out;
-    signal wishbone_debug_in : wishbone_slave_out;
+    signal wishbone_debug_in  : wishbone_slave_out;
     signal wishbone_debug_out : wishbone_master_out;
 
     -- Arbiter array (ghdl doesnt' support assigning the array
     -- elements in the entity instantiation)
-    constant NUM_WB_MASTERS : positive := 3;
+    constant NUM_WB_MASTERS : positive := 4;
     signal wb_masters_out : wishbone_master_out_vector(0 to NUM_WB_MASTERS-1);
     signal wb_masters_in  : wishbone_slave_out_vector(0 to NUM_WB_MASTERS-1);
 
     -- Wishbone master (output of arbiter):
     signal wb_master_in       : wishbone_slave_out;
     signal wb_master_out      : wishbone_master_out;
+    signal wb_snoop           : wishbone_master_out;
 
     -- Main "IO" bus, from main slave decoder to the latch
     signal wb_io_in     : wishbone_master_out;
@@ -175,6 +196,11 @@ architecture behaviour of soc is
     signal ics_to_icp       : ics_to_icp_t;
     signal core_ext_irq     : std_ulogic;
 
+    -- GPIO signals:
+    signal wb_gpio_in    : wb_io_master_out;
+    signal wb_gpio_out   : wb_io_slave_out;
+    signal gpio_intr     : std_ulogic := '0';
+
     -- Main memory signals:
     signal wb_bram_in     : wishbone_master_out;
     signal wb_bram_out    : wishbone_slave_out;
@@ -200,6 +226,7 @@ architecture behaviour of soc is
     signal rst_uart    : std_ulogic := '1';
     signal rst_xics    : std_ulogic := '1';
     signal rst_spi     : std_ulogic := '1';
+    signal rst_gpio    : std_ulogic := '1';
     signal rst_bram    : std_ulogic := '1';
     signal rst_dtm     : std_ulogic := '1';
     signal rst_wbar    : std_ulogic := '1';
@@ -214,9 +241,41 @@ architecture behaviour of soc is
                            SLAVE_IO_UART1,
                            SLAVE_IO_SPI_FLASH_REG,
                            SLAVE_IO_SPI_FLASH_MAP,
+                           SLAVE_IO_GPIO,
                            SLAVE_IO_EXTERNAL,
                            SLAVE_IO_NONE);
     signal slave_io_dbg : slave_io_type;
+
+    function wishbone_widen_data(wb : wb_io_master_out) return wishbone_master_out is
+        variable wwb : wishbone_master_out;
+    begin
+        wwb.adr := wb.adr(wb.adr'left downto 1);
+        wwb.dat := wb.dat & wb.dat;
+        wwb.sel := x"00";
+        if wb.adr(0) = '0' then
+            wwb.sel(3 downto 0) := wb.sel;
+        else
+            wwb.sel(7 downto 4) := wb.sel;
+        end if;
+        wwb.cyc := wb.cyc;
+        wwb.stb := wb.stb;
+        wwb.we := wb.we;
+        return wwb;
+    end;
+
+    function wishbone_narrow_data(wwbs : wishbone_slave_out; adr : std_ulogic_vector(29 downto 0))
+        return wb_io_slave_out is
+        variable wbs : wb_io_slave_out;
+    begin
+        wbs.ack := wwbs.ack;
+        wbs.stall := wwbs.stall;
+        if adr(0) = '0' then
+            wbs.dat := wwbs.dat(31 downto 0);
+        else
+            wbs.dat := wwbs.dat(63 downto 32);
+        end if;
+        return wbs;
+    end;
 
     -- This is the component exported by the 16550 compatible
     -- UART from FuseSoC.
@@ -242,6 +301,7 @@ architecture behaviour of soc is
         dcd_pad_i   : in std_ulogic
         );
     end component;
+
 begin
 
     resets: process(system_clk)
@@ -251,6 +311,7 @@ begin
             rst_uart    <= rst;
             rst_spi     <= rst;
             rst_xics    <= rst;
+            rst_gpio    <= rst;
             rst_bram    <= rst;
             rst_dtm     <= rst;
             rst_wbar    <= rst;
@@ -265,6 +326,7 @@ begin
 	    SIM => SIM,
             HAS_FPU => HAS_FPU,
             HAS_BTC => HAS_BTC,
+            HAS_SHORT_MULT => HAS_SHORT_MULT,
 	    DISABLE_FLATTEN => DISABLE_FLATTEN_CORE,
 	    ALT_RESET_ADDRESS => (23 downto 0 => '0', others => '1'),
             LOG_LENGTH => LOG_LENGTH,
@@ -284,6 +346,7 @@ begin
 	    wishbone_insn_out => wishbone_icore_out,
 	    wishbone_data_in => wishbone_dcore_in,
 	    wishbone_data_out => wishbone_dcore_out,
+            wb_snoop_in => wb_snoop,
 	    dmi_addr => dmi_addr(3 downto 0),
 	    dmi_dout => dmi_core_dout,
 	    dmi_din => dmi_dout,
@@ -296,10 +359,12 @@ begin
     -- Wishbone bus master arbiter & mux
     wb_masters_out <= (0 => wishbone_dcore_out,
 		       1 => wishbone_icore_out,
-		       2 => wishbone_debug_out);
+                       2 => wishbone_widen_data(wishbone_dma_out),
+		       3 => wishbone_debug_out);
     wishbone_dcore_in <= wb_masters_in(0);
     wishbone_icore_in <= wb_masters_in(1);
-    wishbone_debug_in <= wb_masters_in(2);
+    wishbone_dma_in   <= wishbone_narrow_data(wb_masters_in(2), wishbone_dma_out.adr);
+    wishbone_debug_in <= wb_masters_in(3);
     wishbone_arbiter_0: entity work.wishbone_arbiter
 	generic map(
 	    NUM_MASTERS => NUM_WB_MASTERS
@@ -312,6 +377,18 @@ begin
 	    wb_slave_out => wb_master_out,
 	    wb_slave_in => wb_master_in
 	    );
+
+    -- Snoop bus going to caches.
+    -- Gate stb with stall so the caches don't see the stalled strobes.
+    -- That way if the caches see a strobe when their wishbone is stalled,
+    -- they know it is an access by another master.
+    process(all)
+    begin
+        wb_snoop <= wb_master_out;
+        if wb_master_in.stall = '1' then
+            wb_snoop.stb <= '0';
+        end if;
+    end process;
 
     -- Top level Wishbone slaves address decoder & mux
     --
@@ -330,7 +407,7 @@ begin
         variable top_decode : std_ulogic_vector(3 downto 0);
     begin
 	-- Top-level address decoder
-        top_decode := wb_master_out.adr(31 downto 29) & dram_at_0;
+        top_decode := wb_master_out.adr(28 downto 26) & dram_at_0;
         slave_top := SLAVE_TOP_BRAM;
 	if    std_match(top_decode, "0000") then
 	    slave_top := SLAVE_TOP_BRAM;
@@ -416,7 +493,7 @@ begin
 
                         -- Copy write enable to IO out, copy address as well
                         wb_sio_out.we <= wb_io_in.we;
-                        wb_sio_out.adr <= wb_io_in.adr(wb_sio_out.adr'left downto 3) & "000";
+                        wb_sio_out.adr <= wb_io_in.adr(wb_sio_out.adr'left - 1 downto 0) & '0';
 
                         -- Do we have a top word and/or a bottom word ?
                         has_top := wb_io_in.sel(7 downto 4) /= "0000";
@@ -440,7 +517,7 @@ begin
                             wb_sio_out.sel <= wb_io_in.sel(7 downto 4);
 
                             -- Bump address
-                            wb_sio_out.adr(2) <= '1';
+                            wb_sio_out.adr(0) <= '1';
 
                             -- Wait for ack
                             state := WAIT_ACK_TOP;
@@ -468,7 +545,7 @@ begin
                             wb_sio_out.sel <= wb_io_in.sel(7 downto 4);
 
                             -- Bump address and set STB
-                            wb_sio_out.adr(2) <= '1';
+                            wb_sio_out.adr(0) <= '1';
                             wb_sio_out.stb <= '1';
 
                             -- Wait for new ack
@@ -526,7 +603,7 @@ begin
 
 	-- Simple address decoder.
 	slave_io := SLAVE_IO_NONE;
-        match := "11" & wb_sio_out.adr(29 downto 12);
+        match := "11" & wb_sio_out.adr(27 downto 10);
         if    std_match(match, x"FF---") and HAS_DRAM then
 	    slave_io := SLAVE_IO_EXTERNAL;
         elsif std_match(match, x"F----") then
@@ -545,6 +622,8 @@ begin
 	    slave_io := SLAVE_IO_ICS;
 	elsif std_match(match, x"C0006") then
 	    slave_io := SLAVE_IO_SPI_FLASH_REG;
+        elsif std_match(match, x"C0007") then
+            slave_io := SLAVE_IO_GPIO;
 	end if;
         slave_io_dbg <= slave_io;
 	wb_uart0_in <= wb_sio_out;
@@ -555,15 +634,17 @@ begin
 	wb_spiflash_in.cyc <= '0';
         wb_spiflash_is_reg <= '0';
         wb_spiflash_is_map <= '0';
+        wb_gpio_in <= wb_sio_out;
+        wb_gpio_in.cyc <= '0';
 
 	 -- Only give xics 8 bits of wb addr (for now...)
 	wb_xics_icp_in <= wb_sio_out;
 	wb_xics_icp_in.adr <= (others => '0');
-	wb_xics_icp_in.adr(7 downto 0) <= wb_sio_out.adr(7 downto 0);
+	wb_xics_icp_in.adr(5 downto 0) <= wb_sio_out.adr(5 downto 0);
 	wb_xics_icp_in.cyc  <= '0';
 	wb_xics_ics_in <= wb_sio_out;
 	wb_xics_ics_in.adr <= (others => '0');
-	wb_xics_ics_in.adr(11 downto 0) <= wb_sio_out.adr(11 downto 0);
+	wb_xics_ics_in.adr(9 downto 0) <= wb_sio_out.adr(9 downto 0);
 	wb_xics_ics_in.cyc  <= '0';
 
 	wb_ext_io_in <= wb_sio_out;
@@ -575,6 +656,7 @@ begin
 	wb_ext_is_dram_csr   <= '0';
 	wb_ext_is_dram_init  <= '0';
 	wb_ext_is_eth        <= '0';
+        wb_ext_is_sdcard     <= '0';
 
         -- Default response, ack & return all 1's
         wb_sio_in.dat <= (others => '1');
@@ -587,20 +669,23 @@ begin
             --
             -- DRAM init is special at 0xFF* so we just test the top
             -- bit. Everything else is at 0xC8* so we test only bits
-            -- 23 downto 16.
+            -- 23 downto 16 (21 downto 14 in the wishbone addr).
             --
             ext_valid := false;
-            if wb_sio_out.adr(29) = '1' and HAS_DRAM then  -- DRAM init is special
+            if wb_sio_out.adr(27) = '1' and HAS_DRAM then  -- DRAM init is special
                 wb_ext_is_dram_init <= '1';
                 ext_valid := true;
-            elsif wb_sio_out.adr(23 downto 16) = x"00" and HAS_DRAM then
+            elsif wb_sio_out.adr(21 downto 14) = x"00" and HAS_DRAM then
                 wb_ext_is_dram_csr  <= '1';
                 ext_valid := true;
-            elsif wb_sio_out.adr(23 downto 16) = x"02" and HAS_LITEETH then
+            elsif wb_sio_out.adr(21 downto 14) = x"02" and HAS_LITEETH then
                 wb_ext_is_eth       <= '1';
                 ext_valid := true;
-            elsif wb_sio_out.adr(23 downto 16) = x"03" and HAS_LITEETH then
+            elsif wb_sio_out.adr(21 downto 14) = x"03" and HAS_LITEETH then
                 wb_ext_is_eth       <= '1';
+                ext_valid := true;
+            elsif wb_sio_out.adr(21 downto 14) = x"04" and HAS_SD_CARD then
+                wb_ext_is_sdcard    <= '1';
                 ext_valid := true;
             end if;
             if ext_valid then
@@ -626,7 +711,7 @@ begin
 	when SLAVE_IO_SPI_FLASH_MAP =>
             -- Clear top bits so they don't make their way to the
             -- fash chip.
-            wb_spiflash_in.adr(29 downto 28) <= "00";
+            wb_spiflash_in.adr(27 downto 26) <= "00";
 	    wb_spiflash_in.cyc <= wb_sio_out.cyc;
 	    wb_sio_in <= wb_spiflash_out;
             wb_spiflash_is_map <= '1';
@@ -634,6 +719,9 @@ begin
 	    wb_spiflash_in.cyc <= wb_sio_out.cyc;
 	    wb_sio_in <= wb_spiflash_out;
             wb_spiflash_is_reg <= '1';
+        when SLAVE_IO_GPIO =>
+            wb_gpio_in.cyc <= wb_sio_out.cyc;
+            wb_sio_in <= wb_gpio_out;
 	when others =>
 	end case;
 
@@ -651,6 +739,7 @@ begin
 	    HAS_SPI_FLASH => HAS_SPI_FLASH,
 	    SPI_FLASH_OFFSET => SPI_FLASH_OFFSET,
             HAS_LITEETH => HAS_LITEETH,
+            HAS_SD_CARD => HAS_SD_CARD,
             UART0_IS_16550 => UART0_IS_16550,
             HAS_UART1 => HAS_UART1
 	)
@@ -680,7 +769,7 @@ begin
 		txd => uart0_txd,
 		rxd => uart0_rxd,
 		irq => uart0_irq,
-		wb_adr_in => wb_uart0_in.adr(11 downto 0),
+		wb_adr_in => wb_uart0_in.adr(9 downto 0) & "00",
 		wb_dat_in => wb_uart0_in.dat(7 downto 0),
 		wb_dat_out => uart0_dat8,
 		wb_cyc_in => wb_uart0_in.cyc,
@@ -697,7 +786,7 @@ begin
 	    port map (
 		wb_clk_i   => system_clk,
 		wb_rst_i   => rst_uart,
-		wb_adr_i   => wb_uart0_in.adr(4 downto 2),
+		wb_adr_i   => wb_uart0_in.adr(2 downto 0),
 		wb_dat_i   => wb_uart0_in.dat(7 downto 0),
 		wb_dat_o   => uart0_dat8,
 		wb_we_i    => wb_uart0_in.we,
@@ -739,7 +828,7 @@ begin
 	    port map (
 		wb_clk_i   => system_clk,
 		wb_rst_i   => rst_uart,
-		wb_adr_i   => wb_uart1_in.adr(4 downto 2),
+		wb_adr_i   => wb_uart1_in.adr(2 downto 0),
 		wb_dat_i   => wb_uart1_in.dat(7 downto 0),
 		wb_dat_o   => uart1_dat8,
 		wb_we_i    => wb_uart1_in.we,
@@ -827,6 +916,23 @@ begin
             icp_out => ics_to_icp
 	    );
 
+    gpio0_gen: if HAS_GPIO generate
+        gpio : entity work.gpio
+            generic map(
+                NGPIO => NGPIO
+                )
+            port map(
+                clk      => system_clk,
+                rst      => rst_gpio,
+                wb_in    => wb_gpio_in,
+                wb_out   => wb_gpio_out,
+                gpio_in  => gpio_in,
+                gpio_out => gpio_out,
+                gpio_dir => gpio_dir,
+                intr     => gpio_intr
+                );
+    end generate;
+
     -- Assign external interrupts
     interrupts: process(all)
     begin
@@ -834,6 +940,8 @@ begin
         int_level_in(0) <= uart0_irq;
         int_level_in(1) <= ext_irq_eth;
         int_level_in(2) <= uart1_irq;
+        int_level_in(3) <= ext_irq_sdcard;
+        int_level_in(4) <= gpio_intr;
     end process;
 
     -- BRAM Memory slave

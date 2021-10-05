@@ -19,6 +19,9 @@ entity writeback is
         c_out        : out WritebackToCrFileType;
         f_out        : out WritebackToFetch1Type;
 
+        -- PMU event bus
+        events       : out WritebackEventType;
+
         flush_out    : out std_ulogic;
         interrupt_out: out std_ulogic;
         complete_out : out instr_tag_t
@@ -77,10 +80,10 @@ begin
     writeback_1: process(all)
         variable v    : reg_type;
         variable f    : WritebackToFetch1Type;
-	variable cf: std_ulogic_vector(3 downto 0);
+        variable cf: std_ulogic_vector(3 downto 0);
         variable zero : std_ulogic;
         variable sign : std_ulogic;
-	variable scf  : std_ulogic_vector(3 downto 0);
+        variable scf  : std_ulogic_vector(3 downto 0);
         variable vec  : integer range 0 to 16#fff#;
         variable srr1 : std_ulogic_vector(15 downto 0);
         variable intr : std_ulogic;
@@ -100,6 +103,8 @@ begin
         elsif fp_in.valid = '1' then
             complete_out <= fp_in.instr_tag;
         end if;
+        events.instr_complete <= complete_out.valid;
+        events.fp_complete <= fp_in.valid;
 
         intr := e_in.interrupt or l_in.interrupt or fp_in.interrupt;
 
@@ -228,7 +233,7 @@ begin
             f.mode_32bit := e_in.redir_mode(0);
         end if;
 
-	f_out <= f;
+        f_out <= f;
         flush_out <= f_out.redirect;
 
         rin <= v;

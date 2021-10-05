@@ -43,7 +43,7 @@ architecture rtl of spi_flash_ctrl is
     -- Register indices
     constant SPI_REG_BITS       : positive := 3;
 
-    -- Register addresses (matches wishbone addr downto 2, ie, 4 bytes per reg)
+    -- Register addresses (matches wishbone addr downto 0, ie, 4 bytes per reg)
     constant SPI_REG_DATA         : std_ulogic_vector(SPI_REG_BITS-1 downto 0) := "000";
     constant SPI_REG_CTRL         : std_ulogic_vector(SPI_REG_BITS-1 downto 0) := "001";
     constant SPI_REG_AUTO_CFG     : std_ulogic_vector(SPI_REG_BITS-1 downto 0) := "010";
@@ -162,7 +162,7 @@ begin
     wb_map_valid <= wb_valid and wb_sel_map;
 
     -- Register decode. For map accesses, make it look like "invalid"
-    wb_reg       <= wb_req.adr(SPI_REG_BITS+1 downto 2) when wb_reg_valid else SPI_REG_INVALID;
+    wb_reg       <= wb_req.adr(SPI_REG_BITS - 1 downto 0) when wb_reg_valid else SPI_REG_INVALID;
 
     -- Shortcut because we test that a lot: data register access
     wb_reg_dat_v <= '1' when wb_reg = SPI_REG_DATA else '0';
@@ -232,10 +232,10 @@ begin
             if rst = '1' then
                 wb_out.ack   <= '0';
                 wb_out.stall <= '0';
-		wb_stash.cyc <= '0';
-		wb_stash.stb <= '0';
-		wb_stash.sel <= (others => '0');
-		wb_stash.we <= '0';
+                wb_stash.cyc <= '0';
+                wb_stash.stb <= '0';
+                wb_stash.sel <= (others => '0');
+                wb_stash.we <= '0';
             else
                 -- Latch wb responses as well for 1 cycle. Stall is updated
                 -- below
@@ -348,17 +348,17 @@ begin
     auto_sync: process(clk)
     begin
         if rising_edge(clk) then
-	    if rst = '1' then
+            if rst = '1' then
                 auto_last_addr <= (others => '0');
-		auto_state <= AUTO_BOOT;
-	    else
+                auto_state <= AUTO_BOOT;
+            else
                 auto_state <= auto_next;
                 auto_cnt   <= auto_cnt_next;
                 auto_data  <= auto_data_next;
                 if auto_latch_adr = '1' then
                     auto_last_addr <= auto_lad_next;
                 end if;
-	    end if;
+            end if;
         end if;
     end process;
 
@@ -393,7 +393,7 @@ begin
 
         -- Convert wishbone address into a flash address. We mask
         -- off the 4 top address bits to get rid of the "f" there.
-        addr := "00" & wb_req.adr(29 downto 2) & "00";
+        addr := "00" & wb_req.adr(27 downto 0) & "00";
 
         -- Calculate the next address for store & compare later
         auto_lad_next <= std_ulogic_vector(unsigned(addr) + 4);

@@ -1,7 +1,8 @@
 GHDL ?= ghdl
 GHDLFLAGS=--std=08
 CFLAGS=-O3 -Wall
-VERILATOR_FLAGS=-O3 #--trace
+# Need to investigate why yosys is hitting verilator warnings, and eventually turn on -Wall
+VERILATOR_FLAGS=-O3 -Wno-fatal -Wno-CASEOVERLAP -Wno-UNOPTFLAT #--trace
 # It takes forever to build with optimisation, so disable by default
 #VERILATOR_CFLAGS=-O3
 
@@ -10,6 +11,8 @@ YOSYS     ?= yosys
 NEXTPNR   ?= nextpnr-ecp5
 ECPPACK   ?= ecppack
 OPENOCD   ?= openocd
+VUNITRUN  ?= python3 ./run.py
+VERILATOR ?= verilator
 
 # We need a version of GHDL built with either the LLVM or gcc backend.
 # Fedora provides this, but other distros may not. Another option is to use
@@ -37,10 +40,14 @@ YOSYS     = $(DOCKERBIN) $(DOCKERARGS) hdlc/ghdl:yosys yosys
 NEXTPNR   = $(DOCKERBIN) $(DOCKERARGS) hdlc/nextpnr:ecp5 nextpnr-ecp5
 ECPPACK   = $(DOCKERBIN) $(DOCKERARGS) hdlc/prjtrellis ecppack
 OPENOCD   = $(DOCKERBIN) $(DOCKERARGS) --device /dev/bus/usb hdlc/prog openocd
+VUNITRUN  = $(DOCKERBIN) $(DOCKERARGS) ghdl/vunit:llvm python3 ./run.py
+VERILATOR = $(DOCKERBIN) $(DOCKERARGS) verilator/verilator:latest
 endif
 
-all = core_tb icache_tb dcache_tb multiply_tb dmi_dtm_tb divider_tb \
-	rotator_tb countzero_tb wishbone_bram_tb soc_reset_tb
+VUNITARGS += -p10
+
+all = core_tb icache_tb dcache_tb dmi_dtm_tb \
+	wishbone_bram_tb soc_reset_tb
 
 all: $(all)
 
@@ -51,10 +58,10 @@ core_files = decode_types.vhdl common.vhdl wishbone_types.vhdl fetch1.vhdl \
 	cr_file.vhdl crhelpers.vhdl ppc_fx_insns.vhdl rotator.vhdl \
 	logical.vhdl countzero.vhdl multiply.vhdl divider.vhdl execute1.vhdl \
 	loadstore1.vhdl mmu.vhdl dcache.vhdl writeback.vhdl core_debug.vhdl \
-	core.vhdl fpu.vhdl
+	core.vhdl fpu.vhdl pmu.vhdl
 
 soc_files = wishbone_arbiter.vhdl wishbone_bram_wrapper.vhdl sync_fifo.vhdl \
-	wishbone_debug_master.vhdl xics.vhdl syscon.vhdl soc.vhdl \
+	wishbone_debug_master.vhdl xics.vhdl syscon.vhdl gpio.vhdl soc.vhdl \
 	spi_rxtx.vhdl spi_flash_ctrl.vhdl
 
 uart_files = $(wildcard uart16550/*.v)
@@ -62,7 +69,7 @@ uart_files = $(wildcard uart16550/*.v)
 soc_sim_files = $(core_files) $(soc_files) sim_console.vhdl sim_pp_uart.vhdl sim_bram_helpers.vhdl \
 	sim_bram.vhdl sim_jtag_socket.vhdl sim_jtag.vhdl dmi_dtm_xilinx.vhdl \
 	sim_16550_uart.vhdl \
-	random.vhdl glibc_random.vhdl glibc_random_helpers.vhdl
+	foreign_random.vhdl glibc_random.vhdl glibc_random_helpers.vhdl
 
 soc_sim_c_files = sim_vhpi_c.c sim_bram_helpers_c.c sim_console_c.c \
 	sim_jtag_socket_c.c
@@ -79,7 +86,6 @@ $(unisim_lib): $(unisim_lib_files)
 	$(GHDL) -i --std=08 --work=unisim --workdir=$(unisim_dir) $^
 GHDLFLAGS += -P$(unisim_dir)
 
-core_tbs = multiply_tb divider_tb rotator_tb countzero_tb
 soc_tbs = core_tb icache_tb dcache_tb dmi_dtm_tb wishbone_bram_tb
 soc_flash_tbs = core_flash_tb
 soc_dram_tbs = dram_tb core_dram_tb
@@ -104,9 +110,6 @@ $(soc_flash_tbs): %: $(soc_sim_files) $(soc_sim_obj_files) $(unisim_lib) $(fmf_l
 
 $(soc_tbs): %: $(soc_sim_files) $(soc_sim_obj_files) $(unisim_lib) %.vhdl
 	$(GHDL) -c $(GHDLFLAGS) $(soc_sim_link) $(soc_sim_files) $@.vhdl -e $@
-
-$(core_tbs): %: $(core_files) glibc_random.vhdl glibc_random_helpers.vhdl %.vhdl
-	$(GHDL) -c $(GHDLFLAGS) $(core_files) glibc_random.vhdl glibc_random_helpers.vhdl $@.vhdl -e $@
 
 soc_reset_tb: fpga/soc_reset_tb.vhdl fpga/soc_reset.vhdl
 	$(GHDL) -c $(GHDLFLAGS) fpga/soc_reset_tb.vhdl fpga/soc_reset.vhdl -e $@
@@ -138,8 +141,8 @@ $(soc_dram_tbs): %: $(soc_dram_files) $(soc_dram_sim_files) $(soc_dram_sim_obj_f
 endif
 
 # Hello world
-MEMORY_SIZE=8192
-RAM_INIT_FILE=hello_world/hello_world.hex
+MEMORY_SIZE ?=8192
+RAM_INIT_FILE ?=hello_world/hello_world.hex
 
 # Micropython
 #MEMORY_SIZE=393216
@@ -147,14 +150,18 @@ RAM_INIT_FILE=hello_world/hello_world.hex
 
 FPGA_TARGET ?= ORANGE-CRAB
 
+# FIXME: icache RAMs aren't being inferrenced as block RAMs on ECP5
+# with yosys, so make it smaller for now as a workaround.
+ICACHE_NUM_LINES=4
+
 # OrangeCrab with ECP85
 ifeq ($(FPGA_TARGET), ORANGE-CRAB)
 RESET_LOW=true
-CLK_INPUT=50000000
-CLK_FREQUENCY=40000000
+CLK_INPUT=48000000
+CLK_FREQUENCY=48000000
 LPF=constraints/orange-crab.lpf
 PACKAGE=CSFBGA285
-NEXTPNR_FLAGS=--um5g-85k --freq 40
+NEXTPNR_FLAGS=--um5g-85k --freq 48
 OPENOCD_JTAG_CONFIG=openocd/olimex-arm-usb-tiny-h.cfg
 OPENOCD_DEVICE_CONFIG=openocd/LFE5UM5G-85F.cfg
 endif
@@ -172,7 +179,7 @@ OPENOCD_DEVICE_CONFIG=openocd/LFE5UM5G-85F.cfg
 endif
 
 GHDL_IMAGE_GENERICS=-gMEMORY_SIZE=$(MEMORY_SIZE) -gRAM_INIT_FILE=$(RAM_INIT_FILE) \
-	-gRESET_LOW=$(RESET_LOW) -gCLK_INPUT=$(CLK_INPUT) -gCLK_FREQUENCY=$(CLK_FREQUENCY)
+	-gRESET_LOW=$(RESET_LOW) -gCLK_INPUT=$(CLK_INPUT) -gCLK_FREQUENCY=$(CLK_FREQUENCY) -gICACHE_NUM_LINES=$(ICACHE_NUM_LINES)
 
 clkgen=fpga/clk_gen_ecp5.vhd
 toplevel=fpga/top-generic.vhdl
@@ -192,15 +199,13 @@ fpga_files = fpga/soc_reset.vhdl \
 synth_files = $(core_files) $(soc_files) $(fpga_files) $(clkgen) $(toplevel) $(dmi_dtm)
 
 microwatt.json: $(synth_files) $(RAM_INIT_FILE)
-	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 --no-formal $(GHDL_IMAGE_GENERICS) $(synth_files) -e toplevel; synth_ecp5 -json $@  $(SYNTH_ECP5_FLAGS)" $(uart_files)
+	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 --no-formal $(GHDL_IMAGE_GENERICS) $(synth_files) -e toplevel; synth_ecp5 -abc9 -nowidelut -json $@  $(SYNTH_ECP5_FLAGS)" $(uart_files)
 
 microwatt.v: $(synth_files) $(RAM_INIT_FILE)
 	$(YOSYS) -m $(GHDLSYNTH) -p "ghdl --std=08 --no-formal $(GHDL_IMAGE_GENERICS) $(synth_files) -e toplevel; write_verilog $@"
 
-# Need to investigate why yosys is hitting verilator warnings, and eventually turn on -Wall
 microwatt-verilator: microwatt.v verilator/microwatt-verilator.cpp verilator/uart-verilator.c
-	verilator $(VERILATOR_FLAGS) -CFLAGS "$(VERILATOR_CFLAGS) -DCLK_FREQUENCY=$(CLK_FREQUENCY)" --assert --cc $< --exe verilator/microwatt-verilator.cpp verilator/uart-verilator.c -o $@ -Iuart16550 -Wno-fatal -Wno-CASEOVERLAP -Wno-UNOPTFLAT
-	make -C obj_dir -f Vmicrowatt.mk
+	$(VERILATOR) $(VERILATOR_FLAGS) -CFLAGS "$(VERILATOR_CFLAGS) -DCLK_FREQUENCY=$(CLK_FREQUENCY)" -Iuart16550 --assert --cc --exe --build $^ -o $@ -top-module toplevel
 	@cp -f obj_dir/microwatt-verilator microwatt-verilator
 
 microwatt_out.config: microwatt.json $(LPF)
@@ -220,6 +225,9 @@ tests_console = $(sort $(patsubst tests/%.console_out,%,$(wildcard tests/*.conso
 
 tests_console: $(tests_console)
 
+check_vunit:
+	$(VUNITRUN) $(VUNITARGS)
+
 check: $(tests) tests_console test_micropython test_micropython_long tests_unit
 
 check_light: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 test_micropython test_micropython_long tests_console tests_unit
@@ -233,22 +241,24 @@ $(tests_console): core_tb
 test_micropython: core_tb
 	@./scripts/test_micropython.py
 
+test_micropython_verilator: microwatt-verilator
+	@./scripts/test_micropython_verilator.py
+
 test_micropython_long: core_tb
 	@./scripts/test_micropython_long.py
 
-tests_core_tb = $(patsubst %_tb,%_tb_test,$(core_tbs))
+test_micropython_verilator_long: microwatt-verilator
+	@./scripts/test_micropython_verilator_long.py
+
 tests_soc_tb = $(patsubst %_tb,%_tb_test,$(soc_tbs))
 
 %_test: %
 	./$< --assert-level=error > /dev/null
 
-tests_core: $(tests_core_tb)
-
 tests_soc: $(tests_soc_tb)
 
 # FIXME SOC tests have bit rotted, so disable for now
-#tests_unit: tests_core tests_soc
-tests_unit: tests_core
+#tests_unit: tests_soc
 
 TAGS:
 	find . -name '*.vhdl' | xargs ./scripts/vhdltags

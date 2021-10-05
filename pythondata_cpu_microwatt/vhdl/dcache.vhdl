@@ -39,10 +39,14 @@ entity dcache is
         m_in         : in MmuToDcacheType;
         m_out        : out DcacheToMmuType;
 
+        snoop_in     : in wishbone_master_out := wishbone_master_out_init;
+
 	stall_out    : out std_ulogic;
 
         wishbone_out : out wishbone_master_out;
         wishbone_in  : in wishbone_slave_out;
+
+        events       : out DcacheEventType;
 
         log_out      : out std_ulogic_vector(19 downto 0)
         );
@@ -63,8 +67,6 @@ architecture rtl of dcache is
 
     -- Bit fields counts in the address
 
-    -- REAL_ADDR_BITS is the number of real address bits that we store
-    constant REAL_ADDR_BITS : positive := 56;
     -- ROW_BITS is the number of bits to select a row 
     constant ROW_BITS      : natural := log2(BRAM_ROWS);
     -- ROW_LINEBITS is the number of bits to select a row within a line
@@ -118,7 +120,7 @@ architecture rtl of dcache is
     type cache_valids_t is array(index_t) of cache_way_valids_t;
     type row_per_line_valid_t is array(0 to ROW_PER_LINE - 1) of std_ulogic;
 
-    -- Storage. Hopefully "cache_rows" is a BRAM, the rest is LUTs
+    -- Storage. Hopefully implemented in LUTs
     signal cache_tags    : cache_tags_array_t;
     signal cache_tag_set : cache_tags_set_t;
     signal cache_valids  : cache_valids_t;
@@ -285,7 +287,7 @@ architecture rtl of dcache is
         op        : op_t;
         valid     : std_ulogic;
         dcbz      : std_ulogic;
-        real_addr : std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
+        real_addr : real_addr_t;
         data      : std_ulogic_vector(63 downto 0);
         byte_sel  : std_ulogic_vector(7 downto 0);
         hit_way   : way_t;
@@ -313,15 +315,13 @@ architecture rtl of dcache is
         tlb_hit_way      : tlb_way_t;
         tlb_hit_index    : tlb_index_t;
 
-	-- 2-stage data buffer for data forwarded from writes to reads
-	forward_data1    : std_ulogic_vector(63 downto 0);
-	forward_data2    : std_ulogic_vector(63 downto 0);
-        forward_sel1     : std_ulogic_vector(7 downto 0);
-	forward_valid1   : std_ulogic;
-        forward_way1     : way_t;
-        forward_row1     : row_t;
-        use_forward1     : std_ulogic;
+	-- data buffer for data forwarded from writes to reads
+	forward_data     : std_ulogic_vector(63 downto 0);
+        forward_tag      : cache_tag_t;
         forward_sel      : std_ulogic_vector(7 downto 0);
+	forward_valid    : std_ulogic;
+        forward_row      : row_t;
+        data_out         : std_ulogic_vector(63 downto 0);
 
 	-- Cache miss state (reload state machine)
         state            : state_t;
@@ -353,6 +353,8 @@ architecture rtl of dcache is
 
     signal r1 : reg_stage_1_t;
 
+    signal ev : DcacheEventType;
+
     -- Reservation information
     --
     type reservation_t is record
@@ -381,12 +383,16 @@ architecture rtl of dcache is
     signal r0_valid   : std_ulogic;
     signal r0_stall   : std_ulogic;
 
-    signal use_forward1_next : std_ulogic;
-    signal use_forward2_next : std_ulogic;
+    signal fwd_same_tag : std_ulogic;
+    signal use_forward_st : std_ulogic;
+    signal use_forward_rl : std_ulogic;
+    signal use_forward2 : std_ulogic;
 
     -- Cache RAM interface
     type cache_ram_out_t is array(way_t) of cache_row_t;
     signal cache_out   : cache_ram_out_t;
+    signal ram_wr_data : cache_row_t;
+    signal ram_wr_select : std_ulogic_vector(ROW_SIZE - 1 downto 0);
 
     -- PLRU output interface
     type plru_out_t is array(index_t) of std_ulogic_vector(WAY_BITS-1 downto 0);
@@ -404,16 +410,22 @@ architecture rtl of dcache is
     signal tlb_hit : std_ulogic;
     signal tlb_hit_way : tlb_way_t;
     signal pte : tlb_pte_t;
-    signal ra : std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
+    signal ra : real_addr_t;
     signal valid_ra : std_ulogic;
     signal perm_attr : perm_attr_t;
     signal rc_ok : std_ulogic;
     signal perm_ok : std_ulogic;
     signal access_ok : std_ulogic;
+    signal tlb_miss : std_ulogic;
 
     -- TLB PLRU output interface
     type tlb_plru_out_t is array(tlb_index_t) of std_ulogic_vector(TLB_WAY_BITS-1 downto 0);
     signal tlb_plru_victim : tlb_plru_out_t;
+
+    signal snoop_tag_set : cache_tags_set_t;
+    signal snoop_valid   : std_ulogic;
+    signal snoop_wrtag   : cache_tag_t;
+    signal snoop_index   : index_t;
 
     --
     -- Helper functions to decode incoming requests
@@ -440,9 +452,9 @@ architecture rtl of dcache is
     end;
 
     -- Returns whether this is the last row of a line
-    function is_last_row_addr(addr: wishbone_addr_type; last: row_in_line_t) return boolean is
+    function is_last_row_wb_addr(addr: wishbone_addr_type; last: row_in_line_t) return boolean is
     begin
-	return unsigned(addr(LINE_OFF_BITS-1 downto ROW_OFF_BITS)) = last;
+	return unsigned(addr(LINE_OFF_BITS - ROW_OFF_BITS - 1 downto 0)) = last;
     end;
 
     -- Returns whether this is the last row of a line
@@ -452,15 +464,15 @@ architecture rtl of dcache is
     end;
 
     -- Return the address of the next row in the current cache line
-    function next_row_addr(addr: wishbone_addr_type) return std_ulogic_vector is
+    function next_row_wb_addr(addr: wishbone_addr_type) return std_ulogic_vector is
 	variable row_idx : std_ulogic_vector(ROW_LINEBITS-1 downto 0);
 	variable result  : wishbone_addr_type;
     begin
 	-- Is there no simpler way in VHDL to generate that 3 bits adder ?
-	row_idx := addr(LINE_OFF_BITS-1 downto ROW_OFF_BITS);
+	row_idx := addr(ROW_LINEBITS - 1 downto 0);
 	row_idx := std_ulogic_vector(unsigned(row_idx) + 1);
 	result := addr;
-	result(LINE_OFF_BITS-1 downto ROW_OFF_BITS) := row_idx;
+	result(ROW_LINEBITS - 1 downto 0) := row_idx;
 	return result;
     end;
 
@@ -528,7 +540,8 @@ begin
     assert LINE_SIZE mod ROW_SIZE = 0 report "LINE_SIZE not multiple of ROW_SIZE" severity FAILURE;
     assert ispow2(LINE_SIZE)    report "LINE_SIZE not power of 2" severity FAILURE;
     assert ispow2(NUM_LINES)    report "NUM_LINES not power of 2" severity FAILURE;
-    assert ispow2(ROW_PER_LINE) report "ROW_PER_LINE not power of 2" severity FAILURE;
+    assert ispow2(ROW_PER_LINE) and ROW_PER_LINE > 1
+        report "ROW_PER_LINE not power of 2 greater than 1" severity FAILURE;
     assert (ROW_BITS = INDEX_BITS + ROW_LINEBITS)
 	report "geometry bits don't add up" severity FAILURE;
     assert (LINE_OFF_BITS = ROW_OFF_BITS + ROW_LINEBITS)
@@ -563,6 +576,7 @@ begin
                 r.doall := m_in.doall;
                 r.tlbld := m_in.tlbld;
                 r.mmu_req := '1';
+                r.d_valid := '1';
             else
                 r.req := d_in;
                 r.req.data := (others => '0');
@@ -570,21 +584,19 @@ begin
                 r.doall := '0';
                 r.tlbld := '0';
                 r.mmu_req := '0';
+                r.d_valid := '0';
             end if;
-            r.d_valid := '0';
             if rst = '1' then
                 r0_full <= '0';
             elsif (r1.full = '0' and d_in.hold = '0') or r0_full = '0' then
                 r0 <= r;
                 r0_full <= r.req.valid;
-            end if;
-            -- Sample data the cycle after a request comes in from loadstore1.
-            -- If another request has come in already then the data will get
-            -- put directly into req.data below.
-            if r0.req.valid = '1' and r.req.valid = '0' and r0.d_valid = '0' and
-                r0.mmu_req = '0' then
+            elsif r0.d_valid = '0' then
+                -- Sample data the cycle after a request comes in from loadstore1.
+                -- If this request is already moving into r1 then the data will get
+                -- put directly into req.data in the dcache_slow process below.
                 r0.req.data <= d_in.data;
-                r0.d_valid <= '1';
+                r0.d_valid <= r0.req.valid;
             end if;
         end if;
     end process;
@@ -596,6 +608,8 @@ begin
     r0_stall <= r0_full and (r1.full or d_in.hold);
     r0_valid <= r0_full and not r1.full and not d_in.hold;
     stall_out <= r0_stall;
+
+    events <= ev;
 
     -- TLB
     -- Operates in the second cycle on the request latched in r0.req.
@@ -681,6 +695,7 @@ begin
             pte <= (others => '0');
         end if;
         valid_ra <= tlb_hit or not r0.req.virt_mode;
+        tlb_miss <= r0_valid and r0.req.virt_mode and not tlb_hit;
         if r0.req.virt_mode = '1' then
             ra <= pte(REAL_ADDR_BITS - 1 downto TLB_LG_PGSZ) &
                   r0.req.addr(TLB_LG_PGSZ - 1 downto ROW_OFF_BITS) &
@@ -704,6 +719,7 @@ begin
         if rising_edge(clk) then
             tlbie := r0_valid and r0.tlbie;
             tlbwe := r0_valid and r0.tlbld;
+            ev.dtlb_miss_resolved <= tlbwe;
             if rst = '1' or (tlbie = '1' and r0.doall = '1') then
                 -- clear all valid bits at once
                 for i in tlb_index_t loop
@@ -783,6 +799,23 @@ begin
         end if;
     end process;
 
+    -- Cache tag RAM second read port, for snooping
+    cache_tag_read_2 : process(clk)
+        variable addr : real_addr_t;
+    begin
+        if rising_edge(clk) then
+            addr := addr_to_real(wb_to_addr(snoop_in.adr));
+            snoop_tag_set <= cache_tags(get_index(addr));
+            snoop_wrtag <= get_tag(addr);
+            snoop_index <= get_index(addr);
+            -- Don't snoop our own cycles
+            snoop_valid <= '0';
+            if not (r1.wb.cyc = '1' and wishbone_in.stall = '0') then
+                snoop_valid <= snoop_in.cyc and snoop_in.stb and snoop_in.we;
+            end if;
+        end if;
+    end process;
+
     -- Cache request parsing and hit detection
     dcache_request : process(all)
         variable is_hit      : std_ulogic;
@@ -794,11 +827,13 @@ begin
         variable s_hit       : std_ulogic;
         variable s_tag       : cache_tag_t;
         variable s_pte       : tlb_pte_t;
-        variable s_ra        : std_ulogic_vector(REAL_ADDR_BITS - 1 downto 0);
+        variable s_ra        : real_addr_t;
         variable hit_set     : std_ulogic_vector(TLB_NUM_WAYS - 1 downto 0);
         variable hit_way_set : hit_way_set_t;
         variable rel_matches : std_ulogic_vector(TLB_NUM_WAYS - 1 downto 0);
         variable rel_match   : std_ulogic;
+        variable fwd_matches : std_ulogic_vector(TLB_NUM_WAYS - 1 downto 0);
+        variable fwd_match   : std_ulogic;
     begin
 	-- Extract line, row and tag from request
         req_index <= get_index(r0.req.addr);
@@ -814,8 +849,10 @@ begin
         hit_way := 0;
         is_hit := '0';
         rel_match := '0';
+        fwd_match := '0';
         if r0.req.virt_mode = '1' then
             rel_matches := (others => '0');
+            fwd_matches := (others => '0');
             for j in tlb_way_t loop
                 hit_way_set(j) := 0;
                 s_hit := '0';
@@ -835,11 +872,15 @@ begin
                 if s_tag = r1.reload_tag then
                     rel_matches(j) := '1';
                 end if;
+                if s_tag = r1.forward_tag then
+                    fwd_matches(j) := '1';
+                end if;
             end loop;
             if tlb_hit = '1' then
                 is_hit := hit_set(tlb_hit_way);
                 hit_way := hit_way_set(tlb_hit_way);
                 rel_match := rel_matches(tlb_hit_way);
+                fwd_match := fwd_matches(tlb_hit_way);
             end if;
         else
             s_tag := get_tag(r0.req.addr);
@@ -853,38 +894,27 @@ begin
             if s_tag = r1.reload_tag then
                 rel_match := '1';
             end if;
+            if s_tag = r1.forward_tag then
+                fwd_match := '1';
+            end if;
         end if;
         req_same_tag <= rel_match;
-
-        -- See if the request matches the line currently being reloaded
-        if r1.state = RELOAD_WAIT_ACK and req_index = r1.store_index and
-            rel_match = '1' then
-            -- For a store, consider this a hit even if the row isn't valid
-            -- since it will be by the time we perform the store.
-            -- For a load, check the appropriate row valid bit.
-            is_hit := not r0.req.load or r1.rows_valid(req_row mod ROW_PER_LINE);
-            hit_way := replace_way;
-        end if;
+        fwd_same_tag <= fwd_match;
 
         -- Whether to use forwarded data for a load or not
-        use_forward1_next <= '0';
-        if get_row(r1.req.real_addr) = req_row and r1.req.hit_way = hit_way then
-            -- Only need to consider r1.write_bram here, since if we are
-            -- writing refill data here, then we don't have a cache hit this
-            -- cycle on the line being refilled.  (There is the possibility
-            -- that the load following the load miss that started the refill
-            -- could be to the old contents of the victim line, since it is a
-            -- couple of cycles after the refill starts before we see the
-            -- updated cache tag.  In that case we don't use the bypass.)
-            use_forward1_next <= r1.write_bram;
+        use_forward_st <= '0';
+        use_forward_rl <= '0';
+        if r1.store_row = req_row and rel_match = '1' then
+            -- Use the forwarding path if this cycle is a write to this row
+            use_forward_st <= r1.write_bram;
+            if r1.state = RELOAD_WAIT_ACK and wishbone_in.ack = '1' then
+                use_forward_rl <= '1';
+            end if;
         end if;
-        use_forward2_next <= '0';
-        if r1.forward_row1 = req_row and r1.forward_way1 = hit_way then
-            use_forward2_next <= r1.forward_valid1;
+        use_forward2 <= '0';
+        if r1.forward_row = req_row and fwd_match = '1' then
+            use_forward2 <= r1.forward_valid;
         end if;
-
-	-- The way that matched on a hit	       
-	req_hit_way <= hit_way;
 
         -- The way to replace on a miss
         if r1.write_tag = '1' then
@@ -892,6 +922,23 @@ begin
         else
             replace_way <= r1.store_way;
         end if;
+
+        -- See if the request matches the line currently being reloaded
+        if r1.state = RELOAD_WAIT_ACK and req_index = r1.store_index and
+            rel_match = '1' then
+            -- Ignore is_hit from above, because a load miss writes the new tag
+            -- but doesn't clear the valid bit on the line before refilling it.
+            -- For a store, consider this a hit even if the row isn't valid
+            -- since it will be by the time we perform the store.
+            -- For a load, check the appropriate row valid bit; but also,
+            -- if use_forward_rl is 1 then we can consider this a hit.
+            is_hit := not r0.req.load or r1.rows_valid(req_row mod ROW_PER_LINE) or
+                      use_forward_rl;
+            hit_way := replace_way;
+        end if;
+
+	-- The way that matched on a hit	       
+	req_hit_way <= hit_way;
 
         -- work out whether we have permission for this access
         -- NB we don't yet implement AMR, thus no KUAP
@@ -988,28 +1035,9 @@ begin
     -- Return data for loads & completion control logic
     --
     writeback_control: process(all)
-        variable data_out : std_ulogic_vector(63 downto 0);
-        variable data_fwd : std_ulogic_vector(63 downto 0);
-        variable j        : integer;
     begin
-        -- Use the bypass if are reading the row that was written 1 or 2 cycles
-        -- ago, including for the slow_valid = 1 case (i.e. completing a load
-        -- miss or a non-cacheable load).
-        if r1.use_forward1 = '1' then
-            data_fwd := r1.forward_data1;
-        else
-            data_fwd := r1.forward_data2;
-        end if;
-        data_out := cache_out(r1.hit_way);
-        for i in 0 to 7 loop
-            j := i * 8;
-            if r1.forward_sel(i) = '1' then
-                data_out(j + 7 downto j) := data_fwd(j + 7 downto j);
-            end if;
-        end loop;
-
 	d_out.valid <= r1.ls_valid;
-	d_out.data <= data_out;
+	d_out.data <= r1.data_out;
         d_out.store_done <= not r1.stcx_fail;
         d_out.error <= r1.ls_error;
         d_out.cache_paradox <= r1.cache_paradox;
@@ -1017,7 +1045,7 @@ begin
         -- Outputs to MMU
         m_out.done <= r1.mmu_done;
         m_out.err <= r1.mmu_error;
-        m_out.data <= data_out;
+        m_out.data <= r1.data_out;
 
 	-- We have a valid load or store hit or we just completed a slow
 	-- op such as a load miss, a NC load or a store
@@ -1041,7 +1069,7 @@ begin
             -- Request came from loadstore1...
             -- Load hit case is the standard path
             if r1.hit_load_valid = '1' then
-                report "completing load hit data=" & to_hstring(data_out);
+                report "completing load hit data=" & to_hstring(r1.data_out);
             end if;
 
             -- error cases complete without stalling
@@ -1051,7 +1079,7 @@ begin
 
             -- Slow ops (load miss, NC, stores)
             if r1.slow_valid = '1' then
-                report "completing store or load miss data=" & to_hstring(data_out);
+                report "completing store or load miss data=" & to_hstring(r1.data_out);
             end if;
 
         else
@@ -1072,6 +1100,13 @@ begin
         end if;
 
     end process;
+
+    -- RAM write data and select multiplexers
+    ram_wr_data <= r1.req.data when r1.write_bram = '1' else
+                   wishbone_in.dat when r1.dcbz = '0' else
+                   (others => '0');
+    ram_wr_select <= r1.req.byte_sel when r1.write_bram = '1' else
+                     (others => '1');
 
     --
     -- Generate a cache RAM for each way. This handles the normal
@@ -1097,7 +1132,7 @@ begin
 	    generic map (
 		ROW_BITS => ROW_BITS,
 		WIDTH => wishbone_data_bits,
-		ADD_BUF => true
+		ADD_BUF => false
 		)
 	    port map (
 		clk     => clk,
@@ -1106,7 +1141,7 @@ begin
 		rd_data => dout,
 		wr_sel  => wr_sel_m,
 		wr_addr => wr_addr,
-		wr_data => wr_data
+		wr_data => ram_wr_data
 		);
 	process(all)
 	begin
@@ -1122,37 +1157,13 @@ begin
 	    -- For timing, the mux on wr_data/sel/addr is not dependent on anything
 	    -- other than the current state.
 	    --
+            wr_addr <= std_ulogic_vector(to_unsigned(r1.store_row, ROW_BITS));
+
             wr_sel_m <= (others => '0');
-
-	    do_write <= '0';
-            if r1.write_bram = '1' then
-                -- Write store data to BRAM.  This happens one cycle after the
-                -- store is in r0.
-                wr_data <= r1.req.data;
-                wr_sel  <= r1.req.byte_sel;
-                wr_addr <= std_ulogic_vector(to_unsigned(get_row(r1.req.real_addr), ROW_BITS));
-                if i = r1.req.hit_way then
-                    do_write <= '1';
-                end if;
-	    else
-		-- Otherwise, we might be doing a reload or a DCBZ
-                if r1.dcbz = '1' then
-                    wr_data <= (others => '0');
-                else
-                    wr_data <= wishbone_in.dat;
-                end if;
-                wr_addr <= std_ulogic_vector(to_unsigned(r1.store_row, ROW_BITS));
-                wr_sel <= (others => '1');
-
-                if r1.state = RELOAD_WAIT_ACK and wishbone_in.ack = '1' and replace_way = i then
-                    do_write <= '1';
-                end if;
-	    end if;
-
-            -- Mask write selects with do_write since BRAM doesn't
-            -- have a global write-enable
-            if do_write = '1' then
-                wr_sel_m <= wr_sel;
+            if i = replace_way and
+                (r1.write_bram = '1' or
+                 (r1.state = RELOAD_WAIT_ACK and wishbone_in.ack = '1')) then
+                wr_sel_m <= ram_wr_select;
             end if;
 
         end process;
@@ -1163,18 +1174,58 @@ begin
     -- It also handles error cases (TLB miss, cache paradox)
     --
     dcache_fast_hit : process(clk)
+        variable j        : integer;
+        variable sel      : std_ulogic_vector(1 downto 0);
+        variable data_out : std_ulogic_vector(63 downto 0);
     begin
         if rising_edge(clk) then
             if req_op /= OP_NONE then
-		report "op:" & op_t'image(req_op) &
-		    " addr:" & to_hstring(r0.req.addr) &
-		    " nc:" & std_ulogic'image(r0.req.nc) &
-		    " idx:" & integer'image(req_index) &
-		    " tag:" & to_hstring(req_tag) &
-		    " way: " & integer'image(req_hit_way);
-	    end if;
+                report "op:" & op_t'image(req_op) &
+                    " addr:" & to_hstring(r0.req.addr) &
+                    " nc:" & std_ulogic'image(r0.req.nc) &
+                    " idx:" & integer'image(req_index) &
+                    " tag:" & to_hstring(req_tag) &
+                    " way: " & integer'image(req_hit_way);
+            end if;
             if r0_valid = '1' then
                 r1.mmu_req <= r0.mmu_req;
+            end if;
+
+            -- Bypass/forwarding multiplexer for load data.
+            -- Use the bypass if are reading the row of BRAM that was written 0 or 1
+            -- cycles ago, including for the slow_valid = 1 cases (i.e. completing a
+            -- load miss or a non-cacheable load), which are handled via the r1.full case.
+            for i in 0 to 7 loop
+                if r1.full = '1' or use_forward_rl = '1' then
+                    sel := '0' & r1.dcbz;
+                elsif use_forward_st = '1' and r1.req.byte_sel(i) = '1' then
+                    sel := "01";
+                elsif use_forward2 = '1' and r1.forward_sel(i) = '1' then
+                    sel := "10";
+                else
+                    sel := "11";
+                end if;
+                j := i * 8;
+                case sel is
+                    when "00" =>
+                        data_out(j + 7 downto j) := wishbone_in.dat(j + 7 downto j);
+                    when "01" =>
+                        data_out(j + 7 downto j) := r1.req.data(j + 7 downto j);
+                    when "10" =>
+                        data_out(j + 7 downto j) := r1.forward_data(j + 7 downto j);
+                    when others =>
+                        data_out(j + 7 downto j) := cache_out(req_hit_way)(j + 7 downto j);
+                end case;
+            end loop;
+            r1.data_out <= data_out;
+
+            r1.forward_data <= ram_wr_data;
+            r1.forward_tag <= r1.reload_tag;
+            r1.forward_row <= r1.store_row;
+            r1.forward_sel <= ram_wr_select;
+            r1.forward_valid <= r1.write_bram;
+            if r1.state = RELOAD_WAIT_ACK and wishbone_in.ack = '1' then
+                r1.forward_valid <= '1';
             end if;
 
             -- Fast path for load/store hits. Set signals for the writeback controls.
@@ -1228,37 +1279,15 @@ begin
     -- operates at stage 1.
     --
     dcache_slow : process(clk)
-	variable stbs_done : boolean;
+        variable stbs_done : boolean;
         variable req       : mem_access_request_t;
         variable acks      : unsigned(2 downto 0);
     begin
         if rising_edge(clk) then
-            r1.use_forward1 <= use_forward1_next;
-            r1.forward_sel <= (others => '0');
-            if use_forward1_next = '1' then
-                r1.forward_sel <= r1.req.byte_sel;
-            elsif use_forward2_next = '1' then
-                r1.forward_sel <= r1.forward_sel1;
-            end if;
-
-            r1.forward_data2 <= r1.forward_data1;
-            if r1.write_bram = '1' then
-                r1.forward_data1 <= r1.req.data;
-                r1.forward_sel1 <= r1.req.byte_sel;
-                r1.forward_way1 <= r1.req.hit_way;
-                r1.forward_row1 <= get_row(r1.req.real_addr);
-                r1.forward_valid1 <= '1';
-            else
-                if r1.dcbz = '1' then
-                    r1.forward_data1 <= (others => '0');
-                else
-                    r1.forward_data1 <= wishbone_in.dat;
-                end if;
-                r1.forward_sel1 <= (others => '1');
-                r1.forward_way1 <= replace_way;
-                r1.forward_row1 <= r1.store_row;
-                r1.forward_valid1 <= '0';
-            end if;
+            ev.dcache_refill <= '0';
+            ev.load_miss <= '0';
+            ev.store_miss <= '0';
+            ev.dtlb_miss <= tlb_miss;
 
 	    -- On reset, clear all valid bits to force misses
             if rst = '1' then
@@ -1293,6 +1322,13 @@ begin
                     end if;
                 end if;
 
+                -- Do invalidations from snooped stores to memory
+                for i in way_t loop
+                    if snoop_valid = '1' and read_tag(i, snoop_tag_set) = snoop_wrtag then
+                        cache_valids(snoop_index)(i) <= '0';
+                    end if;
+                end loop;
+
                 if r1.write_tag = '1' then
                     -- Store new tag in selected way
                     for i in 0 to NUM_WAYS-1 loop
@@ -1324,7 +1360,7 @@ begin
                         req.data := d_in.data;
                     end if;
                     -- Select all bytes for dcbz and for cacheable loads
-                    if r0.req.dcbz = '1' or (r0.req.load = '1' and r0.req.nc = '0') then
+                    if r0.req.dcbz = '1' or (r0.req.load = '1' and r0.req.nc = '0' and perm_attr.nocache = '0') then
                         req.byte_sel := (others => '1');
                     else
                         req.byte_sel := r0.req.byte_sel;
@@ -1344,7 +1380,7 @@ begin
 		-- Main state machine
 		case r1.state is
                 when IDLE =>
-                    r1.wb.adr <= req.real_addr(r1.wb.adr'left downto 0);
+                    r1.wb.adr <= addr_to_wb(req.real_addr);
                     r1.wb.sel <= req.byte_sel;
                     r1.wb.dat <= req.data;
                     r1.dcbz <= req.dcbz;
@@ -1384,6 +1420,7 @@ begin
 			-- Track that we had one request sent
 			r1.state <= RELOAD_WAIT_ACK;
                         r1.write_tag <= '1';
+                        ev.load_miss <= '1';
 
 		    when OP_LOAD_NC =>
                         r1.wb.cyc <= '1';
@@ -1416,6 +1453,9 @@ begin
                         r1.wb.we <= '1';
                         r1.wb.cyc <= '1';
                         r1.wb.stb <= '1';
+                        if req.op = OP_STORE_MISS then
+                            ev.store_miss <= '1';
+                        end if;
 
 		    -- OP_NONE and OP_BAD do nothing
                     -- OP_BAD & OP_STCX_FAIL were handled above already
@@ -1425,36 +1465,29 @@ begin
 		    end case;
 
                 when RELOAD_WAIT_ACK =>
-                    -- Requests are all sent if stb is 0
-		    stbs_done := r1.wb.stb = '0';
-
 		    -- If we are still sending requests, was one accepted ?
-		    if wishbone_in.stall = '0' and not stbs_done then
-			-- That was the last word ? We are done sending. Clear
-			-- stb and set stbs_done so we can handle an eventual last
-			-- ack on the same cycle.
-			--
-			if is_last_row_addr(r1.wb.adr, r1.end_row_ix) then
+                    if wishbone_in.stall = '0' and r1.wb.stb = '1' then
+			-- That was the last word ? We are done sending. Clear stb.
+			if is_last_row_wb_addr(r1.wb.adr, r1.end_row_ix) then
 			    r1.wb.stb <= '0';
-			    stbs_done := true;
 			end if;
 
 			-- Calculate the next row address
-			r1.wb.adr <= next_row_addr(r1.wb.adr);
+			r1.wb.adr <= next_row_wb_addr(r1.wb.adr);
 		    end if;
 
 		    -- Incoming acks processing
-                    r1.forward_valid1 <= wishbone_in.ack;
 		    if wishbone_in.ack = '1' then
                         r1.rows_valid(r1.store_row mod ROW_PER_LINE) <= '1';
                         -- If this is the data we were looking for, we can
                         -- complete the request next cycle.
                         -- Compare the whole address in case the request in
                         -- r1.req is not the one that started this refill.
-			if req.valid = '1' and req.same_tag = '1' and
-                            ((r1.dcbz = '1' and req.dcbz = '1') or
-                             (r1.dcbz = '0' and req.op = OP_LOAD_MISS)) and
-                            r1.store_row = get_row(req.real_addr) then
+                        -- (Cases where req comes from r0 are handled as a load
+                        -- hit.)
+			if r1.full = '1' and r1.req.same_tag = '1' and
+                            ((r1.dcbz = '1' and req.dcbz = '1') or r1.req.op = OP_LOAD_MISS) and
+                            r1.store_row = get_row(r1.req.real_addr) then
                             r1.full <= '0';
                             r1.slow_valid <= '1';
                             if r1.mmu_req = '0' then
@@ -1462,18 +1495,17 @@ begin
                             else
                                 r1.mmu_done <= '1';
                             end if;
-                            r1.forward_sel <= (others => '1');
-                            r1.use_forward1 <= '1';
 			end if;
 
 			-- Check for completion
-			if stbs_done and is_last_row(r1.store_row, r1.end_row_ix) then
+			if is_last_row(r1.store_row, r1.end_row_ix) then
 			    -- Complete wishbone cycle
 			    r1.wb.cyc <= '0';
 
 			    -- Cache line is now valid
 			    cache_valids(r1.store_index)(r1.store_way) <= '1';
 
+                            ev.dcache_refill <= not r1.dcbz;
                             r1.state <= IDLE;
 			end if;
 
@@ -1497,15 +1529,17 @@ begin
                         -- See if there is another store waiting to be done
                         -- which is in the same real page.
                         if req.valid = '1' then
-                            r1.wb.adr(SET_SIZE_BITS - 1 downto 0) <=
-                                req.real_addr(SET_SIZE_BITS - 1 downto 0);
+                            r1.wb.adr(SET_SIZE_BITS - ROW_OFF_BITS - 1 downto 0) <=
+                                req.real_addr(SET_SIZE_BITS - 1 downto ROW_OFF_BITS);
                             r1.wb.dat <= req.data;
                             r1.wb.sel <= req.byte_sel;
                         end if;
-                        if acks < 7 and req.same_tag = '1' and
+                        if acks < 7 and req.same_tag = '1' and req.dcbz = '0' and
                             (req.op = OP_STORE_MISS or req.op = OP_STORE_HIT) then
                             r1.wb.stb <= '1';
                             stbs_done := false;
+                            r1.store_way <= req.hit_way;
+                            r1.store_row <= get_row(req.real_addr);
                             if req.op = OP_STORE_HIT then
                                 r1.write_bram <= '1';
                             end if;
@@ -1547,8 +1581,6 @@ begin
                         else
                             r1.mmu_done <= '1';
                         end if;
-                        r1.forward_sel <= (others => '1');
-                        r1.use_forward1 <= '1';
 			r1.wb.cyc <= '0';
 			r1.wb.stb <= '0';
 		    end if;
@@ -1563,7 +1595,7 @@ begin
         dcache_log: process(clk)
         begin
             if rising_edge(clk) then
-                log_data <= r1.wb.adr(5 downto 3) &
+                log_data <= r1.wb.adr(2 downto 0) &
                             wishbone_in.stall &
                             wishbone_in.ack &
                             r1.wb.stb & r1.wb.cyc &

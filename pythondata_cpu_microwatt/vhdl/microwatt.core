@@ -27,6 +27,7 @@ filesets:
       - dcache.vhdl
       - divider.vhdl
       - rotator.vhdl
+      - pmu.vhdl
       - writeback.vhdl
       - insn_helpers.vhdl
       - core.vhdl
@@ -44,6 +45,7 @@ filesets:
       - wishbone_bram_wrapper.vhdl
       - soc.vhdl
       - xics.vhdl
+      - gpio.vhdl
       - syscon.vhdl
       - sync_fifo.vhdl
       - spi_rxtx.vhdl
@@ -104,6 +106,12 @@ filesets:
       - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
       - fpga/top-arty.vhdl : {file_type : vhdlSource-2008}
 
+  wukong-v2:
+    files:
+      - fpga/wukong-v2.xdc : {file_type : xdc}
+      - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
+      - fpga/top-wukong-v2.vhdl : {file_type : vhdlSource-2008}
+
   cmod_a7-35:
     files:
       - fpga/cmod_a7-35.xdc : {file_type : xdc}
@@ -115,6 +123,9 @@ filesets:
 
   liteeth:
       depend : [":microwatt:liteeth"]
+
+  litesdcard:
+      depend : [":microwatt:litesdcard"]
 
   uart16550:
       depend : ["::uart16550"]
@@ -133,6 +144,7 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
+      - has_short_mult
     tools:
       vivado: {part : xc7a100tcsg324-1}
     toplevel : toplevel
@@ -224,11 +236,13 @@ targets:
 
   nexys_video:
     default_tool: vivado
-    filesets: [core, nexys_video, soc, fpga, debug_xilinx, litedram, uart16550, xilinx_specific]
+    filesets: [core, nexys_video, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific, litesdcard]
     parameters:
       - memory_size
       - ram_init_file
       - use_litedram=true
+      - use_liteeth=true
+      - use_litesdcard=true
       - disable_flatten_core
       - no_bram
       - spi_flash_offset=10485760
@@ -236,14 +250,15 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
-    generate: [litedram_nexys_video]
+      - has_short_mult
+    generate: [litedram_nexys_video, liteeth_nexys_video, litesdcard_nexys_video]
     tools:
       vivado: {part : xc7a200tsbg484-1}
     toplevel : toplevel
 
   arty_a7-35-nodram:
     default_tool: vivado
-    filesets: [core, arty_a7, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    filesets: [core, arty_a7, soc, fpga, debug_xilinx, uart16550, xilinx_specific, litesdcard]
     parameters :
       - memory_size
       - ram_init_file
@@ -256,18 +271,21 @@ targets:
       - has_uart1
       - has_fpu=false
       - has_btc=false
+      - has_short_mult
+      - use_litesdcard
     tools:
       vivado: {part : xc7a35ticsg324-1L}
     toplevel : toplevel
 
   arty_a7-35:
     default_tool: vivado
-    filesets: [core, arty_a7, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific]
+    filesets: [core, arty_a7, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific, litesdcard]
     parameters :
       - memory_size
       - ram_init_file
       - use_litedram=true
       - use_liteeth=true
+      - use_litesdcard
       - disable_flatten_core
       - no_bram
       - spi_flash_offset=3145728
@@ -276,14 +294,15 @@ targets:
       - has_uart1
       - has_fpu=false
       - has_btc=false
-    generate: [litedram_arty, liteeth_arty]
+      - has_short_mult
+    generate: [litedram_arty, liteeth_arty, litesdcard_arty]
     tools:
       vivado: {part : xc7a35ticsg324-1L}
     toplevel : toplevel
 
   arty_a7-100-nodram:
     default_tool: vivado
-    filesets: [core, arty_a7, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    filesets: [core, arty_a7, soc, fpga, debug_xilinx, uart16550, xilinx_specific, litesdcard]
     parameters :
       - memory_size
       - ram_init_file
@@ -296,18 +315,21 @@ targets:
       - has_uart1
       - has_fpu
       - has_btc
+      - has_short_mult
+      - use_litesdcard
     tools:
       vivado: {part : xc7a100ticsg324-1L}
     toplevel : toplevel
 
   arty_a7-100:
     default_tool: vivado
-    filesets: [core, arty_a7, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific]
+    filesets: [core, arty_a7, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific, litesdcard]
     parameters:
       - memory_size
       - ram_init_file
       - use_litedram=true
       - use_liteeth=true
+      - use_litesdcard
       - disable_flatten_core
       - no_bram
       - spi_flash_offset=4194304
@@ -316,9 +338,54 @@ targets:
       - has_uart1
       - has_fpu
       - has_btc
-    generate: [litedram_arty, liteeth_arty]
+      - has_short_mult
+    generate: [litedram_arty, liteeth_arty, litesdcard_arty]
     tools:
       vivado: {part : xc7a100ticsg324-1L}
+    toplevel : toplevel
+
+  wukong-v2-a100t-nodram:
+    default_tool: vivado
+    filesets: [core, wukong-v2, soc, fpga, debug_xilinx, uart16550, xilinx_specific, litesdcard]
+    parameters:
+      - memory_size
+      - ram_init_file
+      - use_litedram=false
+      - use_liteeth=false
+      - use_litesdcard=true
+      - disable_flatten_core
+      - spi_flash_offset=4194304
+      - clk_frequency=100000000
+      - log_length=2048
+      - uart_is_16550
+      - has_fpu
+      - has_btc
+      - has_short_mult
+    generate: [litesdcard_wukong-v2]
+    tools:
+      vivado: {part : xc7a100tfgg676-1}
+    toplevel : toplevel
+
+  wukong-v2-a100t:
+    default_tool: vivado
+    filesets: [core, wukong-v2, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific, litesdcard]
+    parameters:
+      - memory_size=0
+      - ram_init_file
+      - use_litedram=true
+      - use_liteeth=true
+      - use_litesdcard=true
+      - disable_flatten_core
+      - no_bram=true
+      - spi_flash_offset=4194304
+      - log_length=0
+      - uart_is_16550
+      - has_fpu
+      - has_btc
+      - has_short_mult
+    generate: [litedram_wukong-v2, liteeth_wukong-v2, litesdcard_wukong-v2]
+    tools:
+      vivado: {part : xc7a100tfgg676-1}
     toplevel : toplevel
 
   cmod_a7-35:
@@ -354,8 +421,20 @@ generate:
     generator: liteeth_gen
     parameters: {board : arty}
 
+  litesdcard_arty:
+    generator: litesdcard_gen
+    parameters: {vendor : xilinx}
+
+  litesdcard_nexys_video:
+    generator: litesdcard_gen
+    parameters: {vendor : xilinx}
+
   litedram_nexys_video:
     generator: litedram_gen
+    parameters: {board : nexys-video}
+
+  liteeth_nexys_video:
+    generator: liteeth_gen
     parameters: {board : nexys-video}
 
   litedram_acorn_cle_215:
@@ -365,6 +444,18 @@ generate:
   litedram_genesys2:
     generator: litedram_gen
     parameters: {board : genesys2}
+
+  litedram_wukong-v2:
+    generator: litedram_gen
+    parameters: {board : wukong-v2}
+
+  liteeth_wukong-v2:
+    generator: liteeth_gen
+    parameters: {board : wukong-v2}
+
+  litesdcard_wukong-v2:
+    generator: litesdcard_gen
+    parameters: {vendor : xilinx}
 
 parameters:
   memory_size:
@@ -407,6 +498,12 @@ parameters:
     paramtype   : generic
     default     : true
 
+  has_short_mult:
+    datatype    : bool
+    description : Include a 16 bit x 16 bit single-cycle multiplier in the core
+    paramtype   : generic
+    default     : false
+
   disable_flatten_core:
     datatype    : bool
     description : Prevent Vivado from flattening the main core components
@@ -422,6 +519,12 @@ parameters:
   use_liteeth:
     datatype    : bool
     description : Use liteEth
+    paramtype   : generic
+    default     : false
+
+  use_litesdcard:
+    datatype    : bool
+    description : Use LiteSDCard
     paramtype   : generic
     default     : false
 

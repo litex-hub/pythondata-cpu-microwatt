@@ -162,3 +162,98 @@ test_bdnzl:
 	li	%r3,0
 9:	mtlr	%r10
 	blr
+
+/* Test that a load that hits stores gets the correct data */
+	.global test_loadhitstore
+test_loadhitstore:
+	addi	%r5,%r1,-16
+	ld	%r0,0(%r5)
+	li	%r0,0
+	std	%r0,0(%r5)
+	li	%r6,0x66
+	li	%r7,0x77
+	.balign	64
+	nop
+	nop
+	nop
+	nop
+	stb	%r6,2(%r5)
+	stb	%r7,3(%r5)
+	ld	%r0,0(%r5)
+	sldi	%r6,%r6,16
+	sldi	%r7,%r7,24
+	or	%r7,%r6,%r7
+	subf	%r3,%r0,%r7
+	blr
+
+/* Test for double execution of addi */
+.balign 64
+	.global test_icbi
+test_icbi:
+1:	li	%r3,0
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	icbi	0,%r0
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	addi	%r3,%r3,1
+	blr
+
+	.global test_dcbz_near_store
+test_dcbz_near_store:
+	li	%r0,-1
+	addi	%r10,%r1,-64
+	# cacheline align stack pointer
+	srdi	%r10,%r10,6
+	sldi	%r10,%r10,6
+
+	std	%r0,0(%r10)
+	std	%r0,8(%r10)
+	std	%r0,16(%r10)
+	std	%r0,24(%r10)
+	std	%r0,32(%r10)
+	std	%r0,40(%r10)
+	std	%r0,48(%r10)
+	std	%r0,56(%r10)
+
+	li	%r3,0xa5
+	# Store to same cacheline as dcbz, although it doesn't seem
+	# necessary to hit the issue.
+	std	%r3,0(%r10)
+	dcbz	0,%r10
+
+	ld	%r0,0(%r10)
+	ld	%r3,8(%r10)
+	ld	%r4,16(%r10)
+	ld	%r5,24(%r10)
+	ld	%r6,32(%r10)
+	ld	%r7,40(%r10)
+	ld	%r8,48(%r10)
+	ld	%r9,56(%r10)
+
+	or	%r3,%r3,%r0
+	or	%r3,%r3,%r4
+	or	%r3,%r3,%r5
+	or	%r3,%r3,%r6
+	or	%r3,%r3,%r7
+	or	%r3,%r3,%r8
+	or	%r3,%r3,%r9
+
+	blr
