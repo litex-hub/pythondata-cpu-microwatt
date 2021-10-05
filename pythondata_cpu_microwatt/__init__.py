@@ -4,42 +4,42 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post999"
-version_tuple = (0, 0, 999)
+version_str = "0.0.post1141"
+version_tuple = (0, 0, 1141)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post999")
+    pversion = V("0.0.post1141")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post904"
-data_version_tuple = (0, 0, 904)
+data_version_str = "0.0.post1036"
+data_version_tuple = (0, 0, 1036)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post904")
+    pdata_version = V("0.0.post1036")
 except ImportError:
     pass
-data_git_hash = "6d827b93580684e5977f5d7340ed128521161f42"
-data_git_describe = "v0.0-904-g6d827b9"
+data_git_hash = "9cbe1f4a178bdb7f6fd1b35cddfaeace7c249821"
+data_git_describe = "v0.0-1036-g9cbe1f4"
 data_git_msg = """\
-commit 6d827b93580684e5977f5d7340ed128521161f42
-Merge: 0af9062 be11ebb
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Thu Mar 25 14:43:45 2021 +1100
+commit 9cbe1f4a178bdb7f6fd1b35cddfaeace7c249821
+Merge: 099862b 2d142a6
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Tue Sep 28 09:06:18 2021 +1000
 
-    Merge pull request #286 from antonblanchard/Makefile-cleanup-3
+    Merge pull request #334 from antonblanchard/icbi-issue
     
-    A few more Makefile cleanups
+    Add a test for icbi and dcbz issues
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post95"
-tool_version_tuple = (0, 0, 95)
+tool_version_str = "0.0.post105"
+tool_version_tuple = (0, 0, 105)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post95")
+    ptool_version = V("0.0.post105")
 except ImportError:
     pass
 
