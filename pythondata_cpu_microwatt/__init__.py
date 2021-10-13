@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1148"
-version_tuple = (0, 0, 1148)
+version_str = "0.0.post1150"
+version_tuple = (0, 0, 1150)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1148")
+    pversion = V("0.0.post1150")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1036"
-data_version_tuple = (0, 0, 1036)
+data_version_str = "0.0.post1038"
+data_version_tuple = (0, 0, 1038)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1036")
+    pdata_version = V("0.0.post1038")
 except ImportError:
     pass
-data_git_hash = "9cbe1f4a178bdb7f6fd1b35cddfaeace7c249821"
-data_git_describe = "v0.0-1036-g9cbe1f4"
+data_git_hash = "8a030502a22c206d2efefe28415ff367bc01c4f6"
+data_git_describe = "v0.0-1038-g8a03050"
 data_git_msg = """\
-commit 9cbe1f4a178bdb7f6fd1b35cddfaeace7c249821
-Merge: 099862b 2d142a6
+commit 8a030502a22c206d2efefe28415ff367bc01c4f6
+Merge: 9cbe1f4 a5c9b3c
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Sep 28 09:06:18 2021 +1000
+Date:   Wed Oct 13 17:44:47 2021 +1100
 
-    Merge pull request #334 from antonblanchard/icbi-issue
+    Merge pull request #336 from paulusmack/fixes
     
-    Add a test for icbi and dcbz issues
+    Makefile: Correct parameters for the Orange Crab 85F
 
 """
 
