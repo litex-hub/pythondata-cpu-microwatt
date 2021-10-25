@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1150"
-version_tuple = (0, 0, 1150)
+version_str = "0.0.post1152"
+version_tuple = (0, 0, 1152)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1150")
+    pversion = V("0.0.post1152")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1038"
-data_version_tuple = (0, 0, 1038)
+data_version_str = "0.0.post1040"
+data_version_tuple = (0, 0, 1040)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1038")
+    pdata_version = V("0.0.post1040")
 except ImportError:
     pass
-data_git_hash = "8a030502a22c206d2efefe28415ff367bc01c4f6"
-data_git_describe = "v0.0-1038-g8a03050"
+data_git_hash = "7fa7b45faa17950de44591f7a73722fdf8a87385"
+data_git_describe = "v0.0-1040-g7fa7b45"
 data_git_msg = """\
-commit 8a030502a22c206d2efefe28415ff367bc01c4f6
-Merge: 9cbe1f4 a5c9b3c
+commit 7fa7b45faa17950de44591f7a73722fdf8a87385
+Merge: 8a03050 d458b58
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Wed Oct 13 17:44:47 2021 +1100
+Date:   Mon Oct 25 16:49:19 2021 +1100
 
-    Merge pull request #336 from paulusmack/fixes
+    Merge pull request #337 from paulusmack/fixes
     
-    Makefile: Correct parameters for the Orange Crab 85F
+    ECP5: Adjust PLL constants so the PLL lock indication works
 
 """
 
