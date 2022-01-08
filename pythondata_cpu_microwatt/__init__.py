@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1157"
-version_tuple = (0, 0, 1157)
+version_str = "0.0.post1159"
+version_tuple = (0, 0, 1159)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1157")
+    pversion = V("0.0.post1159")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1040"
-data_version_tuple = (0, 0, 1040)
+data_version_str = "0.0.post1042"
+data_version_tuple = (0, 0, 1042)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1040")
+    pdata_version = V("0.0.post1042")
 except ImportError:
     pass
-data_git_hash = "7fa7b45faa17950de44591f7a73722fdf8a87385"
-data_git_describe = "v0.0-1040-g7fa7b45"
+data_git_hash = "67164a6ffa41672d8779f62efb0a5a7d96b7a1f7"
+data_git_describe = "v0.0-1042-g67164a6"
 data_git_msg = """\
-commit 7fa7b45faa17950de44591f7a73722fdf8a87385
-Merge: 8a03050 d458b58
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Oct 25 16:49:19 2021 +1100
+commit 67164a6ffa41672d8779f62efb0a5a7d96b7a1f7
+Merge: 7fa7b45 9ceb463
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Sun Jan 9 08:08:48 2022 +1100
 
-    Merge pull request #337 from paulusmack/fixes
+    Merge pull request #338 from shenki/yosys-read-verilog
     
-    ECP5: Adjust PLL constants so the PLL lock indication works
+    Makefile: Use read_verilog with yosys
 
 """
 
