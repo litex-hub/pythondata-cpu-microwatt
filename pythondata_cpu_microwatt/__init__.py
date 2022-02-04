@@ -4,35 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1183"
-version_tuple = (0, 0, 1183)
+version_str = "0.0.post1185"
+version_tuple = (0, 0, 1185)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1183")
+    pversion = V("0.0.post1185")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1059"
-data_version_tuple = (0, 0, 1059)
+data_version_str = "0.0.post1061"
+data_version_tuple = (0, 0, 1061)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1059")
+    pdata_version = V("0.0.post1061")
 except ImportError:
     pass
-data_git_hash = "6ff3b2499ceaf911252f634d44469fefb58952ae"
-data_git_describe = "v0.0-1059-g6ff3b24"
+data_git_hash = "cef3660e74f606f49d18df2fc0e27a858bbd4579"
+data_git_describe = "v0.0-1061-gcef3660"
 data_git_msg = """\
-commit 6ff3b2499ceaf911252f634d44469fefb58952ae
-Merge: fda8879 cdd661d
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Jan 18 13:27:27 2022 +1100
+commit cef3660e74f606f49d18df2fc0e27a858bbd4579
+Merge: 6ff3b24 2491aa7
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Fri Feb 4 11:43:42 2022 +1100
 
-    Merge pull request #342 from mkj/orangecrab-merge
+    Merge pull request #345 from antonblanchard/popcnt-go-fast
     
-    Orangecrab working with litedram
-    
-    Fixed up a few simple merge conflicts in the Makefile.
+    popcnt* timing improvements from Paul
 
 """
 
