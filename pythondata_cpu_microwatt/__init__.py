@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1185"
-version_tuple = (0, 0, 1185)
+version_str = "0.0.post1187"
+version_tuple = (0, 0, 1187)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1185")
+    pversion = V("0.0.post1187")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1061"
-data_version_tuple = (0, 0, 1061)
+data_version_str = "0.0.post1063"
+data_version_tuple = (0, 0, 1063)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1061")
+    pdata_version = V("0.0.post1063")
 except ImportError:
     pass
-data_git_hash = "cef3660e74f606f49d18df2fc0e27a858bbd4579"
-data_git_describe = "v0.0-1061-gcef3660"
+data_git_hash = "5a5a0826017c9acd45f39bda48c449017997ecb7"
+data_git_describe = "v0.0-1063-g5a5a082"
 data_git_msg = """\
-commit cef3660e74f606f49d18df2fc0e27a858bbd4579
-Merge: 6ff3b24 2491aa7
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Fri Feb 4 11:43:42 2022 +1100
+commit 5a5a0826017c9acd45f39bda48c449017997ecb7
+Merge: cef3660 286757f
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Mon Feb 7 17:57:08 2022 +1100
 
-    Merge pull request #345 from antonblanchard/popcnt-go-fast
+    Merge pull request #343 from mikey/orange-crab-ci
     
-    popcnt* timing improvements from Paul
+    ci: Add new Orange Crab build
 
 """
 
