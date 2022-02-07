@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1187"
-version_tuple = (0, 0, 1187)
+version_str = "0.0.post1194"
+version_tuple = (0, 0, 1194)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1187")
+    pversion = V("0.0.post1194")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1063"
-data_version_tuple = (0, 0, 1063)
+data_version_str = "0.0.post1070"
+data_version_tuple = (0, 0, 1070)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1063")
+    pdata_version = V("0.0.post1070")
 except ImportError:
     pass
-data_git_hash = "5a5a0826017c9acd45f39bda48c449017997ecb7"
-data_git_describe = "v0.0-1063-g5a5a082"
+data_git_hash = "27b660ef769a61ff1afc567d108438222803fd16"
+data_git_describe = "v0.0-1070-g27b660e"
 data_git_msg = """\
-commit 5a5a0826017c9acd45f39bda48c449017997ecb7
-Merge: cef3660 286757f
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Mon Feb 7 17:57:08 2022 +1100
+commit 27b660ef769a61ff1afc567d108438222803fd16
+Merge: 5a5a082 9c64f8a
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Tue Feb 8 09:09:22 2022 +1100
 
-    Merge pull request #343 from mikey/orange-crab-ci
+    Merge pull request #346 from mkj/dmi_ecp5
     
-    ci: Add new Orange Crab build
+    Add DMI and mw_debug for ECP5
 
 """
 
