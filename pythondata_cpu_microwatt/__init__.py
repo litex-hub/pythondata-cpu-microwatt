@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1196"
-version_tuple = (0, 0, 1196)
+version_str = "0.0.post1202"
+version_tuple = (0, 0, 1202)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1196")
+    pversion = V("0.0.post1202")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1070"
-data_version_tuple = (0, 0, 1070)
+data_version_str = "0.0.post1076"
+data_version_tuple = (0, 0, 1076)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1070")
+    pdata_version = V("0.0.post1076")
 except ImportError:
     pass
-data_git_hash = "27b660ef769a61ff1afc567d108438222803fd16"
-data_git_describe = "v0.0-1070-g27b660e"
+data_git_hash = "2b97fb0bf3d159a125122f8f0bdb5f24ef57e096"
+data_git_describe = "v0.0-1076-g2b97fb0"
 data_git_msg = """\
-commit 27b660ef769a61ff1afc567d108438222803fd16
-Merge: 5a5a082 9c64f8a
+commit 2b97fb0bf3d159a125122f8f0bdb5f24ef57e096
+Merge: 27b660e 0aa898c
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Feb 8 09:09:22 2022 +1100
+Date:   Wed Feb 23 12:03:59 2022 +1100
 
-    Merge pull request #346 from mkj/dmi_ecp5
+    Merge pull request #348 from paulusmack/reduce
     
-    Add DMI and mw_debug for ECP5
+    Reduce LUT usage
 
 """
 
