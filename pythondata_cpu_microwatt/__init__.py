@@ -4,33 +4,39 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1204"
-version_tuple = (0, 0, 1204)
+version_str = "0.0.post1205"
+version_tuple = (0, 0, 1205)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1204")
+    pversion = V("0.0.post1205")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1078"
-data_version_tuple = (0, 0, 1078)
+data_version_str = "0.0.post1079"
+data_version_tuple = (0, 0, 1079)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1078")
+    pdata_version = V("0.0.post1079")
 except ImportError:
     pass
-data_git_hash = "b4770197a2e07c321f283d8882a3dcb380a1344b"
-data_git_describe = "v0.0-1078-gb477019"
+data_git_hash = "ffcdaaa92d3ef4fc8a4c75d0517da02bcdf91a61"
+data_git_describe = "v0.0-1079-gffcdaaa"
 data_git_msg = """\
-commit b4770197a2e07c321f283d8882a3dcb380a1344b
-Merge: 2b97fb0 fcb783a
+commit ffcdaaa92d3ef4fc8a4c75d0517da02bcdf91a61
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Fri Feb 25 11:08:57 2022 +1100
+Date:   Fri Feb 25 13:18:38 2022 +1100
 
-    Merge pull request #349 from madscientist159/master
+    Update the README Issues (#350)
     
-    Extend LiteDRAM VHDL wrapper to allow more than one clock line
+    We've had these for a while now:
+     - D/I cache
+     - GPR bypassing
+     - Supervisor state (and can boot linux)
+    
+    We still need Vector/VMX/VSX (and probably some other things)
+    
+    Signed-off-by: Michael Neuling <mikey@neuling.org>
 
 """
 
