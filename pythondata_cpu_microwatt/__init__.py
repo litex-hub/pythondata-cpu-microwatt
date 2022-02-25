@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1202"
-version_tuple = (0, 0, 1202)
+version_str = "0.0.post1204"
+version_tuple = (0, 0, 1204)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1202")
+    pversion = V("0.0.post1204")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1076"
-data_version_tuple = (0, 0, 1076)
+data_version_str = "0.0.post1078"
+data_version_tuple = (0, 0, 1078)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1076")
+    pdata_version = V("0.0.post1078")
 except ImportError:
     pass
-data_git_hash = "2b97fb0bf3d159a125122f8f0bdb5f24ef57e096"
-data_git_describe = "v0.0-1076-g2b97fb0"
+data_git_hash = "b4770197a2e07c321f283d8882a3dcb380a1344b"
+data_git_describe = "v0.0-1078-gb477019"
 data_git_msg = """\
-commit 2b97fb0bf3d159a125122f8f0bdb5f24ef57e096
-Merge: 27b660e 0aa898c
+commit b4770197a2e07c321f283d8882a3dcb380a1344b
+Merge: 2b97fb0 fcb783a
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Wed Feb 23 12:03:59 2022 +1100
+Date:   Fri Feb 25 11:08:57 2022 +1100
 
-    Merge pull request #348 from paulusmack/reduce
+    Merge pull request #349 from madscientist159/master
     
-    Reduce LUT usage
+    Extend LiteDRAM VHDL wrapper to allow more than one clock line
 
 """
 
