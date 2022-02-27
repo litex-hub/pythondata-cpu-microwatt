@@ -4,39 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1205"
-version_tuple = (0, 0, 1205)
+version_str = "0.0.post1207"
+version_tuple = (0, 0, 1207)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1205")
+    pversion = V("0.0.post1207")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1079"
-data_version_tuple = (0, 0, 1079)
+data_version_str = "0.0.post1081"
+data_version_tuple = (0, 0, 1081)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1079")
+    pdata_version = V("0.0.post1081")
 except ImportError:
     pass
-data_git_hash = "ffcdaaa92d3ef4fc8a4c75d0517da02bcdf91a61"
-data_git_describe = "v0.0-1079-gffcdaaa"
+data_git_hash = "f01f3d233ae4de595fa29beb305d00ce960f041e"
+data_git_describe = "v0.0-1081-gf01f3d2"
 data_git_msg = """\
-commit ffcdaaa92d3ef4fc8a4c75d0517da02bcdf91a61
+commit f01f3d233ae4de595fa29beb305d00ce960f041e
+Merge: ffcdaaa c0c00d0
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Fri Feb 25 13:18:38 2022 +1100
+Date:   Mon Feb 28 08:17:50 2022 +1100
 
-    Update the README Issues (#350)
+    Merge pull request #352 from mkj/static-urjtag
     
-    We've had these for a while now:
-     - D/I cache
-     - GPR bypassing
-     - Supervisor state (and can boot linux)
-    
-    We still need Vector/VMX/VSX (and probably some other things)
-    
-    Signed-off-by: Michael Neuling <mikey@neuling.org>
+    mw_debug: Add STATIC_URJTAG flag
 
 """
 
