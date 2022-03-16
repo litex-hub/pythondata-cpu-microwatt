@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1207"
-version_tuple = (0, 0, 1207)
+version_str = "0.0.post1213"
+version_tuple = (0, 0, 1213)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1207")
+    pversion = V("0.0.post1213")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1081"
-data_version_tuple = (0, 0, 1081)
+data_version_str = "0.0.post1087"
+data_version_tuple = (0, 0, 1087)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1081")
+    pdata_version = V("0.0.post1087")
 except ImportError:
     pass
-data_git_hash = "f01f3d233ae4de595fa29beb305d00ce960f041e"
-data_git_describe = "v0.0-1081-gf01f3d2"
+data_git_hash = "30fd936c128c83391ad358d0aae8e958bd124399"
+data_git_describe = "v0.0-1087-g30fd936"
 data_git_msg = """\
-commit f01f3d233ae4de595fa29beb305d00ce960f041e
-Merge: ffcdaaa c0c00d0
+commit 30fd936c128c83391ad358d0aae8e958bd124399
+Merge: af1b76d 0b39947
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Feb 28 08:17:50 2022 +1100
+Date:   Wed Mar 16 10:49:47 2022 +1100
 
-    Merge pull request #352 from mkj/static-urjtag
+    Merge pull request #358 from antonblanchard/unused-sig
     
-    mw_debug: Add STATIC_URJTAG flag
+    Remove unused sequential signal from Fetch1ToIcacheType
 
 """
 
