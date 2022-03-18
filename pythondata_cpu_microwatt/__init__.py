@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1213"
-version_tuple = (0, 0, 1213)
+version_str = "0.0.post1215"
+version_tuple = (0, 0, 1215)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1213")
+    pversion = V("0.0.post1215")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1087"
-data_version_tuple = (0, 0, 1087)
+data_version_str = "0.0.post1089"
+data_version_tuple = (0, 0, 1089)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1087")
+    pdata_version = V("0.0.post1089")
 except ImportError:
     pass
-data_git_hash = "30fd936c128c83391ad358d0aae8e958bd124399"
-data_git_describe = "v0.0-1087-g30fd936"
+data_git_hash = "8bf48ac094ac1f6c01e4c483132645874552c327"
+data_git_describe = "v0.0-1089-g8bf48ac"
 data_git_msg = """\
-commit 30fd936c128c83391ad358d0aae8e958bd124399
-Merge: af1b76d 0b39947
+commit 8bf48ac094ac1f6c01e4c483132645874552c327
+Merge: 30fd936 b5accb7
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Wed Mar 16 10:49:47 2022 +1100
+Date:   Fri Mar 18 18:28:34 2022 +1100
 
-    Merge pull request #358 from antonblanchard/unused-sig
+    Merge pull request #360 from antonblanchard/log2ceil-issue
     
-    Remove unused sequential signal from Fetch1ToIcacheType
+    wishbone_bram_wrapper ram_addr_bits is 1 bit off
 
 """
 
