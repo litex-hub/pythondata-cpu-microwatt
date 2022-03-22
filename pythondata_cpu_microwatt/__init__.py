@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1215"
-version_tuple = (0, 0, 1215)
+version_str = "0.0.post1217"
+version_tuple = (0, 0, 1217)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1215")
+    pversion = V("0.0.post1217")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1089"
-data_version_tuple = (0, 0, 1089)
+data_version_str = "0.0.post1091"
+data_version_tuple = (0, 0, 1091)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1089")
+    pdata_version = V("0.0.post1091")
 except ImportError:
     pass
-data_git_hash = "8bf48ac094ac1f6c01e4c483132645874552c327"
-data_git_describe = "v0.0-1089-g8bf48ac"
+data_git_hash = "f5e06c2d4bd8faa90a2d3c47ca7ba22343e3aae8"
+data_git_describe = "v0.0-1091-gf5e06c2"
 data_git_msg = """\
-commit 8bf48ac094ac1f6c01e4c483132645874552c327
-Merge: 30fd936 b5accb7
+commit f5e06c2d4bd8faa90a2d3c47ca7ba22343e3aae8
+Merge: 8bf48ac 948f6f4
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Fri Mar 18 18:28:34 2022 +1100
+Date:   Tue Mar 22 11:55:54 2022 +1100
 
-    Merge pull request #360 from antonblanchard/log2ceil-issue
+    Merge pull request #361 from antonblanchard/alt-reset-address
     
-    wishbone_bram_wrapper ram_addr_bits is 1 bit off
+    Allow ALT_RESET_ADDRESS to be overridden
 
 """
 
