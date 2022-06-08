@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1233"
-version_tuple = (0, 0, 1233)
+version_str = "0.0.post1236"
+version_tuple = (0, 0, 1236)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1233")
+    pversion = V("0.0.post1236")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1091"
-data_version_tuple = (0, 0, 1091)
+data_version_str = "0.0.post1094"
+data_version_tuple = (0, 0, 1094)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1091")
+    pdata_version = V("0.0.post1094")
 except ImportError:
     pass
-data_git_hash = "f5e06c2d4bd8faa90a2d3c47ca7ba22343e3aae8"
-data_git_describe = "v0.0-1091-gf5e06c2"
+data_git_hash = "b8fc5636a4e811701508499c67bf8e4d7b390c33"
+data_git_describe = "v0.0-1094-gb8fc563"
 data_git_msg = """\
-commit f5e06c2d4bd8faa90a2d3c47ca7ba22343e3aae8
-Merge: 8bf48ac 948f6f4
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Mar 22 11:55:54 2022 +1100
+commit b8fc5636a4e811701508499c67bf8e4d7b390c33
+Merge: f5e06c2 ebdddcc
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Wed Jun 8 14:54:48 2022 +1000
 
-    Merge pull request #361 from antonblanchard/alt-reset-address
+    Merge pull request #365 from antonblanchard/less-fpga-init
     
-    Allow ALT_RESET_ADDRESS to be overridden
+    Remove some FPGA style signal inits
 
 """
 
