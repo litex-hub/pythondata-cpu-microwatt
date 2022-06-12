@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1236"
-version_tuple = (0, 0, 1236)
+version_str = "0.0.post1240"
+version_tuple = (0, 0, 1240)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1236")
+    pversion = V("0.0.post1240")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1094"
-data_version_tuple = (0, 0, 1094)
+data_version_str = "0.0.post1098"
+data_version_tuple = (0, 0, 1098)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1094")
+    pdata_version = V("0.0.post1098")
 except ImportError:
     pass
-data_git_hash = "b8fc5636a4e811701508499c67bf8e4d7b390c33"
-data_git_describe = "v0.0-1094-gb8fc563"
+data_git_hash = "1ff852b012155ad610e9d044cac3461adc198f85"
+data_git_describe = "v0.0-1098-g1ff852b"
 data_git_msg = """\
-commit b8fc5636a4e811701508499c67bf8e4d7b390c33
-Merge: f5e06c2 ebdddcc
+commit 1ff852b012155ad610e9d044cac3461adc198f85
+Merge: b7c4d3c e243807
 Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Wed Jun 8 14:54:48 2022 +1000
+Date:   Sun Jun 12 10:24:54 2022 +1000
 
-    Merge pull request #365 from antonblanchard/less-fpga-init
+    Merge pull request #369 from antonblanchard/loadstore-pmu-init
     
-    Remove some FPGA style signal inits
+    loadstore1: Initialise PMU events
 
 """
 
