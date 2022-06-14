@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1244"
-version_tuple = (0, 0, 1244)
+version_str = "0.0.post1246"
+version_tuple = (0, 0, 1246)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1244")
+    pversion = V("0.0.post1246")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1102"
-data_version_tuple = (0, 0, 1102)
+data_version_str = "0.0.post1104"
+data_version_tuple = (0, 0, 1104)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1102")
+    pdata_version = V("0.0.post1104")
 except ImportError:
     pass
-data_git_hash = "b82eea593341c3a8da0f0afbd4e8aabdc852ef6d"
-data_git_describe = "v0.0-1102-gb82eea5"
+data_git_hash = "1047239a377304f25095eb179de9c06977a5e732"
+data_git_describe = "v0.0-1104-g1047239"
 data_git_msg = """\
-commit b82eea593341c3a8da0f0afbd4e8aabdc852ef6d
-Merge: d3aff67 ff442d1
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Jun 14 13:09:57 2022 +1000
+commit 1047239a377304f25095eb179de9c06977a5e732
+Merge: b82eea5 9d35340
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Tue Jun 14 18:10:37 2022 +1000
 
-    Merge pull request #366 from antonblanchard/hello-world-bss
+    Merge pull request #377 from antonblanchard/fpu-init
     
-    Zero BSS in hello world test
+    fpu: Reduce uninitialised signals
 
 """
 
