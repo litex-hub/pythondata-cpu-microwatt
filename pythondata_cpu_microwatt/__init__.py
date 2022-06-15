@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1246"
-version_tuple = (0, 0, 1246)
+version_str = "0.0.post1248"
+version_tuple = (0, 0, 1248)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1246")
+    pversion = V("0.0.post1248")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1104"
-data_version_tuple = (0, 0, 1104)
+data_version_str = "0.0.post1106"
+data_version_tuple = (0, 0, 1106)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1104")
+    pdata_version = V("0.0.post1106")
 except ImportError:
     pass
-data_git_hash = "1047239a377304f25095eb179de9c06977a5e732"
-data_git_describe = "v0.0-1104-g1047239"
+data_git_hash = "6e1e763c025fb72707275f1aca0bb55fb9fc2f0d"
+data_git_describe = "v0.0-1106-g6e1e763"
 data_git_msg = """\
-commit 1047239a377304f25095eb179de9c06977a5e732
-Merge: b82eea5 9d35340
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Tue Jun 14 18:10:37 2022 +1000
+commit 6e1e763c025fb72707275f1aca0bb55fb9fc2f0d
+Merge: 1047239 f06abb6
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Wed Jun 15 11:02:58 2022 +1000
 
-    Merge pull request #377 from antonblanchard/fpu-init
+    Merge pull request #368 from antonblanchard/icache-pmu-events
     
-    fpu: Reduce uninitialised signals
+    icache: Hook up PMU events
 
 """
 
