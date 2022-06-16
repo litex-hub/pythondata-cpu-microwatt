@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1248"
-version_tuple = (0, 0, 1248)
+version_str = "0.0.post1257"
+version_tuple = (0, 0, 1257)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1248")
+    pversion = V("0.0.post1257")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1106"
-data_version_tuple = (0, 0, 1106)
+data_version_str = "0.0.post1115"
+data_version_tuple = (0, 0, 1115)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1106")
+    pdata_version = V("0.0.post1115")
 except ImportError:
     pass
-data_git_hash = "6e1e763c025fb72707275f1aca0bb55fb9fc2f0d"
-data_git_describe = "v0.0-1106-g6e1e763"
+data_git_hash = "ee5e3778edc1d6234195d746236e3804f682a9cf"
+data_git_describe = "v0.0-1115-gee5e377"
 data_git_msg = """\
-commit 6e1e763c025fb72707275f1aca0bb55fb9fc2f0d
-Merge: 1047239 f06abb6
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Wed Jun 15 11:02:58 2022 +1000
+commit ee5e3778edc1d6234195d746236e3804f682a9cf
+Merge: c43692f 9ec22af
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Thu Jun 16 14:38:12 2022 +1000
 
-    Merge pull request #368 from antonblanchard/icache-pmu-events
+    Merge pull request #364 from shenki/readme-updates
     
-    icache: Hook up PMU events
+    Readme updates
 
 """
 
