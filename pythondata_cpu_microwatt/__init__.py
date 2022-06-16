@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1257"
-version_tuple = (0, 0, 1257)
+version_str = "0.0.post1261"
+version_tuple = (0, 0, 1261)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1257")
+    pversion = V("0.0.post1261")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1115"
-data_version_tuple = (0, 0, 1115)
+data_version_str = "0.0.post1119"
+data_version_tuple = (0, 0, 1119)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1115")
+    pdata_version = V("0.0.post1119")
 except ImportError:
     pass
-data_git_hash = "ee5e3778edc1d6234195d746236e3804f682a9cf"
-data_git_describe = "v0.0-1115-gee5e377"
+data_git_hash = "b983d5080e27a267ff349635289103b74058df1e"
+data_git_describe = "v0.0-1119-gb983d50"
 data_git_msg = """\
-commit ee5e3778edc1d6234195d746236e3804f682a9cf
-Merge: c43692f 9ec22af
+commit b983d5080e27a267ff349635289103b74058df1e
+Merge: d4db331 b47b718
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Thu Jun 16 14:38:12 2022 +1000
+Date:   Thu Jun 16 16:47:33 2022 +1000
 
-    Merge pull request #364 from shenki/readme-updates
+    Merge pull request #376 from antonblanchard/loadstore-init
     
-    Readme updates
+    loadstore1: reduce U state being output
 
 """
 
