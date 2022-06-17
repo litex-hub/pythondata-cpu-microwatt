@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1261"
-version_tuple = (0, 0, 1261)
+version_str = "0.0.post1265"
+version_tuple = (0, 0, 1265)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1261")
+    pversion = V("0.0.post1265")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1119"
-data_version_tuple = (0, 0, 1119)
+data_version_str = "0.0.post1123"
+data_version_tuple = (0, 0, 1123)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1119")
+    pdata_version = V("0.0.post1123")
 except ImportError:
     pass
-data_git_hash = "b983d5080e27a267ff349635289103b74058df1e"
-data_git_describe = "v0.0-1119-gb983d50"
+data_git_hash = "35e0dbed345011bafb651fa7d168de550e6fd6e7"
+data_git_describe = "v0.0-1123-g35e0dbe"
 data_git_msg = """\
-commit b983d5080e27a267ff349635289103b74058df1e
-Merge: d4db331 b47b718
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Thu Jun 16 16:47:33 2022 +1000
+commit 35e0dbed345011bafb651fa7d168de550e6fd6e7
+Merge: cd52390 844ca0e
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Fri Jun 17 09:46:57 2022 +1000
 
-    Merge pull request #376 from antonblanchard/loadstore-init
+    Merge pull request #353 from tianrui-wei/master
     
-    loadstore1: reduce U state being output
+    fix: fix icache_tb not finishing correctly
 
 """
 
