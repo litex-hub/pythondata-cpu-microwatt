@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1265"
-version_tuple = (0, 0, 1265)
+version_str = "0.0.post1268"
+version_tuple = (0, 0, 1268)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1265")
+    pversion = V("0.0.post1268")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1123"
-data_version_tuple = (0, 0, 1123)
+data_version_str = "0.0.post1126"
+data_version_tuple = (0, 0, 1126)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1123")
+    pdata_version = V("0.0.post1126")
 except ImportError:
     pass
-data_git_hash = "35e0dbed345011bafb651fa7d168de550e6fd6e7"
-data_git_describe = "v0.0-1123-g35e0dbe"
+data_git_hash = "bad9a9a2e815c252ec984dd0b747f1dc888c863c"
+data_git_describe = "v0.0-1126-gbad9a9a"
 data_git_msg = """\
-commit 35e0dbed345011bafb651fa7d168de550e6fd6e7
-Merge: cd52390 844ca0e
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Fri Jun 17 09:46:57 2022 +1000
+commit bad9a9a2e815c252ec984dd0b747f1dc888c863c
+Merge: 35e0dbe a060ad5
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Mon Jul 25 16:31:12 2022 +1000
 
-    Merge pull request #353 from tianrui-wei/master
+    Merge pull request #380 from iagocaran/master
     
-    fix: fix icache_tb not finishing correctly
+    tests/pmu: Add load/store completed and instruction/cycle count
 
 """
 
