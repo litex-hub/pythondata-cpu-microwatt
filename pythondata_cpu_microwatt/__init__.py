@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1299"
-version_tuple = (0, 0, 1299)
+version_str = "0.0.post1388"
+version_tuple = (0, 0, 1388)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1299")
+    pversion = V("0.0.post1388")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1157"
-data_version_tuple = (0, 0, 1157)
+data_version_str = "0.0.post1246"
+data_version_tuple = (0, 0, 1246)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1157")
+    pdata_version = V("0.0.post1246")
 except ImportError:
     pass
-data_git_hash = "281a125f1fa9edb464dd580874899d2732a92d0f"
-data_git_describe = "v0.0-1157-g281a125"
+data_git_hash = "d3fb2639dd375fb65a3cce20e44fba2bf28b443d"
+data_git_describe = "v0.0-1246-gd3fb263"
 data_git_msg = """\
-commit 281a125f1fa9edb464dd580874899d2732a92d0f
-Merge: bad9a9a d6121cd
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Jul 26 10:08:33 2022 +1000
+commit d3fb2639dd375fb65a3cce20e44fba2bf28b443d
+Merge: 047f739 24d04ed
+Author: Anton Blanchard <anton@linux.ibm.com>
+Date:   Wed Sep 7 18:00:11 2022 +1000
 
-    Merge pull request #379 from paulusmack/master
+    Merge pull request #403 from mikey/litedram-warnings
     
-    Lots of improvements
+    Fix litedram wrapper build warnings and metavalues
 
 """
 
