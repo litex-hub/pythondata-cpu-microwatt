@@ -173,9 +173,11 @@ begin
                 terminated <= '0';
                 log_trigger_delay <= 0;
                 gspr_index <= (others => '0');
+                log_dmi_addr <= (others => '0');
             else
                 if do_log_trigger = '1' or log_trigger_delay /= 0 then
-                    if log_trigger_delay = 255 then
+                    if log_trigger_delay = 255 or
+                        (LOG_LENGTH < 1024 and log_trigger_delay = LOG_LENGTH / 4) then
                         log_dmi_trigger(1) <= '1';
                         log_trigger_delay <= 0;
                     else
@@ -273,7 +275,7 @@ begin
             valid := '1';
             sel := "000";
             isram := '1';
-            raddr := 0;
+            raddr := (others => '0');
             odd := '0';
             case gspr_index(4 downto 0) is
                 when 5x"00" =>
@@ -304,7 +306,7 @@ begin
                 when others =>
                     valid := '0';
             end case;
-            dbg_spr_addr <= isram & sel & std_ulogic_vector(to_unsigned(raddr, 3)) & odd;
+            dbg_spr_addr <= isram & sel & std_ulogic_vector(raddr) & odd;
             spr_index_valid <= valid;
         end if;
     end process;
@@ -333,6 +335,7 @@ begin
                               addr : std_ulogic_vector(31 downto 0)) return std_ulogic_vector is
             variable firstbit : integer;
         begin
+            assert not is_X(addr);
             firstbit := to_integer(unsigned(addr(1 downto 0))) * 64;
             return data(firstbit + 63 downto firstbit);
         end;
@@ -350,9 +353,14 @@ begin
         begin
             if rising_edge(clk) then
                 if log_wr_enable = '1' then
+                    assert not is_X(log_wr_ptr);
                     log_array(to_integer(log_wr_ptr)) <= log_data;
                 end if;
-                log_rd <= log_array(to_integer(log_rd_ptr_latched));
+                if is_X(log_rd_ptr_latched) then
+                    log_rd <= (others => 'X');
+                else
+                    log_rd <= log_array(to_integer(log_rd_ptr_latched));
+                end if;
             end if;
         end process;
 
@@ -365,6 +373,7 @@ begin
                 if rst = '1' then
                     log_wr_ptr <= (others => '0');
                     log_toggle <= '0';
+                    log_rd_ptr_latched <= (others => '0');
                 elsif log_wr_enable = '1' then
                     if log_wr_ptr = to_unsigned(LOG_LENGTH - 1, LOG_INDEX_BITS) then
                         log_toggle <= not log_toggle;

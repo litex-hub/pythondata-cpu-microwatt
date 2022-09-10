@@ -9,6 +9,7 @@ filesets:
       - wishbone_types.vhdl
       - common.vhdl
       - fetch1.vhdl
+      - predecode.vhdl
       - decode1.vhdl
       - helpers.vhdl
       - decode2.vhdl
@@ -50,6 +51,7 @@ filesets:
       - sync_fifo.vhdl
       - spi_rxtx.vhdl
       - spi_flash_ctrl.vhdl
+      - git.vhdl
     file_type : vhdlSource-2008
 
   fpga:
@@ -65,6 +67,7 @@ filesets:
   xilinx_specific:
     files:
       - xilinx-mult.vhdl : {file_type : vhdlSource-2008}
+      - xilinx-mult-32s.vhdl : {file_type : vhdlSource-2008}
       - fpga/fpga-random.vhdl : {file_type : vhdlSource-2008}
       - fpga/fpga-random.xdc : {file_type : xdc}
 
@@ -106,6 +109,12 @@ filesets:
       - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
       - fpga/top-arty.vhdl : {file_type : vhdlSource-2008}
 
+  antmicro-artix-dc-scm:
+    files:
+      - fpga/antmicro_artix_dc_scm.xdc: {file_type : xdc}
+      - fpga/clk_gen_plle2.vhd : {file_type : vhdlSource-2008}
+      - fpga/top-antmicro-artix-dc-scm.vhdl : {file_type : vhdlSource-2008}
+
   wukong-v2:
     files:
       - fpga/wukong-v2.xdc : {file_type : xdc}
@@ -134,6 +143,7 @@ targets:
   nexys_a7:
     default_tool: vivado
     filesets: [core, nexys_a7, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    generate: [git_hash]
     parameters :
       - memory_size
       - ram_init_file
@@ -144,7 +154,6 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
-      - has_short_mult
     tools:
       vivado: {part : xc7a100tcsg324-1}
     toplevel : toplevel
@@ -152,6 +161,7 @@ targets:
   acorn-cle-215-nodram:
     default_tool: vivado
     filesets: [core, acorn_cle_215, soc, fpga, debug_xilinx, uart16550, xilinx_specific]
+    generate: [git_hash]
     parameters :
       - memory_size
       - ram_init_file
@@ -178,6 +188,7 @@ targets:
       - spi_flash_offset=10485760
       - log_length=2048
       - uart_is_16550=false
+    generate: [git_hash]
     tools:
       vivado: {part : xc7k325tffg900-2}
     toplevel : toplevel
@@ -194,7 +205,7 @@ targets:
       - spi_flash_offset=10485760
       - log_length=2048
       - uart_is_16550
-    generate: [litedram_acorn_cle_215]
+    generate: [litedram_acorn_cle_215, git_hash]
     tools:
       vivado: {part : xc7a200tsbg484-2}
     toplevel : toplevel
@@ -211,7 +222,7 @@ targets:
       - spi_flash_offset=10485760
       - log_length=2048
       - uart_is_16550=false
-    generate: [litedram_genesys2]
+    generate: [litedram_genesys2, git_hash]
     tools:
       vivado: {part : xc7k325tffg900-2}
     toplevel : toplevel
@@ -230,6 +241,7 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
+    generate: [git_hash]
     tools:
       vivado: {part : xc7a200tsbg484-1}
     toplevel : toplevel
@@ -250,8 +262,7 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
-      - has_short_mult
-    generate: [litedram_nexys_video, liteeth_nexys_video, litesdcard_nexys_video]
+    generate: [litedram_nexys_video, liteeth_nexys_video, litesdcard_nexys_video, git_hash]
     tools:
       vivado: {part : xc7a200tsbg484-1}
     toplevel : toplevel
@@ -271,8 +282,8 @@ targets:
       - has_uart1
       - has_fpu=false
       - has_btc=false
-      - has_short_mult
       - use_litesdcard
+    generate: [git_hash]
     tools:
       vivado: {part : xc7a35ticsg324-1L}
     toplevel : toplevel
@@ -294,8 +305,7 @@ targets:
       - has_uart1
       - has_fpu=false
       - has_btc=false
-      - has_short_mult
-    generate: [litedram_arty, liteeth_arty, litesdcard_arty]
+    generate: [litedram_arty, liteeth_arty, litesdcard_arty, git_hash]
     tools:
       vivado: {part : xc7a35ticsg324-1L}
     toplevel : toplevel
@@ -315,8 +325,8 @@ targets:
       - has_uart1
       - has_fpu
       - has_btc
-      - has_short_mult
       - use_litesdcard
+    generate: [git_hash]
     tools:
       vivado: {part : xc7a100ticsg324-1L}
     toplevel : toplevel
@@ -338,10 +348,31 @@ targets:
       - has_uart1
       - has_fpu
       - has_btc
-      - has_short_mult
-    generate: [litedram_arty, liteeth_arty, litesdcard_arty]
+    generate: [litedram_arty, liteeth_arty, litesdcard_arty, git_hash]
     tools:
       vivado: {part : xc7a100ticsg324-1L}
+    toplevel : toplevel
+
+  antmicro-artix-dc-scm:
+    default_tool: vivado
+    filesets: [core, antmicro-artix-dc-scm, soc, fpga, debug_xilinx, litedram, liteeth, uart16550, xilinx_specific]
+    parameters :
+      - memory_size
+      - ram_init_file
+      - use_litedram=true
+      - use_liteeth=true
+      - clk_input
+      - clk_frequency
+      - disable_flatten_core
+      - no_bram
+      - log_length=2048
+      - uart_is_16550
+      - has_uart1
+      - has_fpu
+      - has_btc
+    generate: [litedram_nexys_video, liteeth_nexys_video, git_hash]
+    tools:
+      vivado: {part : xc7a100tfgg484-1}
     toplevel : toplevel
 
   wukong-v2-a100t-nodram:
@@ -360,8 +391,7 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
-      - has_short_mult
-    generate: [litesdcard_wukong-v2]
+    generate: [litesdcard_wukong-v2, git_hash]
     tools:
       vivado: {part : xc7a100tfgg676-1}
     toplevel : toplevel
@@ -382,8 +412,7 @@ targets:
       - uart_is_16550
       - has_fpu
       - has_btc
-      - has_short_mult
-    generate: [litedram_wukong-v2, liteeth_wukong-v2, litesdcard_wukong-v2]
+    generate: [litedram_wukong-v2, liteeth_wukong-v2, litesdcard_wukong-v2, git_hash]
     tools:
       vivado: {part : xc7a100tfgg676-1}
     toplevel : toplevel
@@ -402,17 +431,26 @@ targets:
       - uart_is_16550
       - has_fpu=false
       - has_btc=false
+    generate: [git_hash]
     tools:
       vivado: {part : xc7a35tcpg236-1}
     toplevel : toplevel
 
   synth:
     filesets: [core, soc, xilinx_specific]
+    generate: [git_hash]
     tools:
       vivado: {pnr : none}
     toplevel: core
 
+generators:
+  git_hash_gen:
+    command: scripts/make_version_fusesoc.py
+
 generate:
+  git_hash:
+    generator : git_hash_gen
+
   litedram_arty:
     generator: litedram_gen
     parameters: {board : arty}
@@ -497,12 +535,6 @@ parameters:
     description : Include a branch target cache in the core
     paramtype   : generic
     default     : true
-
-  has_short_mult:
-    datatype    : bool
-    description : Include a 16 bit x 16 bit single-cycle multiplier in the core
-    paramtype   : generic
-    default     : false
 
   disable_flatten_core:
     datatype    : bool

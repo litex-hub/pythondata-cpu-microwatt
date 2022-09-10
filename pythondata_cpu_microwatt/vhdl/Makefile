@@ -2,7 +2,14 @@ GHDL ?= ghdl
 GHDLFLAGS=--std=08
 CFLAGS=-O3 -Wall
 # Need to investigate why yosys is hitting verilator warnings, and eventually turn on -Wall
-VERILATOR_FLAGS=-O3 -Wno-fatal -Wno-CASEOVERLAP -Wno-UNOPTFLAT #--trace
+VERILATOR_FLAGS=-O3 -Wno-fatal -Wno-CASEOVERLAP -Wno-UNOPTFLAT
+VERILATOR_TRACE=0
+
+ifeq ($(VERILATOR_TRACE),1)
+VERILATOR_FLAGS += --trace
+verilator_extra_link =  -Wl,obj_dir/verilated_vcd_c.o
+endif
+
 # It takes forever to build with optimisation, so disable by default
 #VERILATOR_CFLAGS=-O3
 
@@ -55,18 +62,23 @@ all = core_tb icache_tb dcache_tb dmi_dtm_tb \
 
 all: $(all)
 
+# This updates git.vhdl only when needed. Make runs this before doing
+# dependancy checks hence make will only rebuild dependancies if the
+# git status has actually changed.
+$(shell scripts/make_version.sh git.vhdl)
+
 core_files = decode_types.vhdl common.vhdl wishbone_types.vhdl fetch1.vhdl \
-	utils.vhdl plru.vhdl cache_ram.vhdl icache.vhdl \
+	utils.vhdl plru.vhdl cache_ram.vhdl icache.vhdl predecode.vhdl \
 	decode1.vhdl helpers.vhdl insn_helpers.vhdl \
 	control.vhdl decode2.vhdl register_file.vhdl \
 	cr_file.vhdl crhelpers.vhdl ppc_fx_insns.vhdl rotator.vhdl \
-	logical.vhdl countbits.vhdl multiply.vhdl divider.vhdl execute1.vhdl \
-	loadstore1.vhdl mmu.vhdl dcache.vhdl writeback.vhdl core_debug.vhdl \
-	core.vhdl fpu.vhdl pmu.vhdl
+	logical.vhdl countbits.vhdl multiply.vhdl multiply-32s.vhdl divider.vhdl \
+	execute1.vhdl loadstore1.vhdl mmu.vhdl dcache.vhdl writeback.vhdl \
+	core_debug.vhdl core.vhdl fpu.vhdl pmu.vhdl
 
 soc_files = wishbone_arbiter.vhdl wishbone_bram_wrapper.vhdl sync_fifo.vhdl \
 	wishbone_debug_master.vhdl xics.vhdl syscon.vhdl gpio.vhdl soc.vhdl \
-	spi_rxtx.vhdl spi_flash_ctrl.vhdl
+	spi_rxtx.vhdl spi_flash_ctrl.vhdl git.vhdl
 
 uart_files = $(wildcard uart16550/*.v)
 
@@ -130,14 +142,14 @@ verilated_dram: litedram/generated/sim/litedram_core.v
 	make -C obj_dir -f ../litedram/extras/sim_dram_verilate.mk VERILATOR_ROOT=$(VERILATOR_ROOT)
 
 SIM_DRAM_CFLAGS  = -I. -Iobj_dir -Ilitedram/generated/sim -I$(VERILATOR_ROOT)/include -I$(VERILATOR_ROOT)/include/vltstd
-SIM_DRAM_CFLAGS += -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=1 -DVL_PRINTF=printf -faligned-new
+SIM_DRAM_CFLAGS += -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=$(VERILATOR_TRACE) -DVL_PRINTF=printf -faligned-new
 sim_litedram_c.o: litedram/extras/sim_litedram_c.cpp verilated_dram
 	$(CC)  $(CPPFLAGS) $(SIM_DRAM_CFLAGS) $(CFLAGS) -c $< -o $@
 
 soc_dram_files = $(core_files) $(soc_files) litedram/extras/litedram-wrapper-l2.vhdl litedram/generated/sim/litedram-initmem.vhdl
 soc_dram_sim_files = $(soc_sim_files) litedram/extras/sim_litedram.vhdl
 soc_dram_sim_obj_files = $(soc_sim_obj_files) sim_litedram_c.o
-dram_link_files=-Wl,obj_dir/Vlitedram_core__ALL.a -Wl,obj_dir/verilated.o -Wl,obj_dir/verilated_vcd_c.o -Wl,-lstdc++
+dram_link_files=-Wl,obj_dir/Vlitedram_core__ALL.a -Wl,obj_dir/verilated.o $(verilator_extra_link) -Wl,-lstdc++
 soc_dram_sim_link=$(patsubst %,-Wl$(comma)%,$(soc_dram_sim_obj_files)) $(dram_link_files)
 
 $(soc_dram_tbs): %: $(soc_dram_files) $(soc_dram_sim_files) $(soc_dram_sim_obj_files) $(flash_model_files) $(unisim_lib) $(fmf_lib) %.vhdl
@@ -324,6 +336,7 @@ _clean:
 	rm -f scripts/mw_debug/mw_debug
 	rm -f microwatt.bin microwatt.json microwatt.svf microwatt_out.config
 	rm -f microwatt.v microwatt-verilator
+	rm -f git.vhdl
 	rm -rf obj_dir/
 
 clean: _clean
