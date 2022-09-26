@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1388"
-version_tuple = (0, 0, 1388)
+version_str = "0.0.post1390"
+version_tuple = (0, 0, 1390)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1388")
+    pversion = V("0.0.post1390")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1246"
-data_version_tuple = (0, 0, 1246)
+data_version_str = "0.0.post1248"
+data_version_tuple = (0, 0, 1248)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1246")
+    pdata_version = V("0.0.post1248")
 except ImportError:
     pass
-data_git_hash = "d3fb2639dd375fb65a3cce20e44fba2bf28b443d"
-data_git_describe = "v0.0-1246-gd3fb263"
+data_git_hash = "d9c55defdb3175e84a3fe1722cf6abca977484c0"
+data_git_describe = "v0.0-1248-gd9c55de"
 data_git_msg = """\
-commit d3fb2639dd375fb65a3cce20e44fba2bf28b443d
-Merge: 047f739 24d04ed
-Author: Anton Blanchard <anton@linux.ibm.com>
-Date:   Wed Sep 7 18:00:11 2022 +1000
+commit d9c55defdb3175e84a3fe1722cf6abca977484c0
+Merge: d3fb263 ed58073
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Mon Sep 26 16:47:15 2022 +1000
 
-    Merge pull request #403 from mikey/litedram-warnings
+    Merge pull request #407 from shingarov/openocd-012
     
-    Fix litedram wrapper build warnings and metavalues
+    Recognize version string "0.12" in recent OpenOCD master
 
 """
 
