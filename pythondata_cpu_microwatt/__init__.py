@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1390"
-version_tuple = (0, 0, 1390)
+version_str = "0.0.post1392"
+version_tuple = (0, 0, 1392)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1390")
+    pversion = V("0.0.post1392")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1248"
-data_version_tuple = (0, 0, 1248)
+data_version_str = "0.0.post1250"
+data_version_tuple = (0, 0, 1250)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1248")
+    pdata_version = V("0.0.post1250")
 except ImportError:
     pass
-data_git_hash = "d9c55defdb3175e84a3fe1722cf6abca977484c0"
-data_git_describe = "v0.0-1248-gd9c55de"
+data_git_hash = "5766dbab372f705184dd869c7448633be1b81c7b"
+data_git_describe = "v0.0-1250-g5766dba"
 data_git_msg = """\
-commit d9c55defdb3175e84a3fe1722cf6abca977484c0
-Merge: d3fb263 ed58073
+commit 5766dbab372f705184dd869c7448633be1b81c7b
+Merge: d9c55de 6c3f7d7
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Sep 26 16:47:15 2022 +1000
+Date:   Mon Sep 26 16:49:11 2022 +1000
 
-    Merge pull request #407 from shingarov/openocd-012
+    Merge pull request #406 from shingarov/spi-kintex
     
-    Recognize version string "0.12" in recent OpenOCD master
+    Add support for flashing the s25fl256s onboard Genesys2
 
 """
 
