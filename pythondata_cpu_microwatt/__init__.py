@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1392"
-version_tuple = (0, 0, 1392)
+version_str = "0.0.post1398"
+version_tuple = (0, 0, 1398)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1392")
+    pversion = V("0.0.post1398")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1250"
-data_version_tuple = (0, 0, 1250)
+data_version_str = "0.0.post1256"
+data_version_tuple = (0, 0, 1256)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1250")
+    pdata_version = V("0.0.post1256")
 except ImportError:
     pass
-data_git_hash = "5766dbab372f705184dd869c7448633be1b81c7b"
-data_git_describe = "v0.0-1250-g5766dba"
+data_git_hash = "84a0fba25de23cc7bdd1e20918c4615a2a2e00cb"
+data_git_describe = "v0.0-1256-g84a0fba"
 data_git_msg = """\
-commit 5766dbab372f705184dd869c7448633be1b81c7b
-Merge: d9c55de 6c3f7d7
+commit 84a0fba25de23cc7bdd1e20918c4615a2a2e00cb
+Merge: 5766dba b8f9c83
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Sep 26 16:49:11 2022 +1000
+Date:   Thu Sep 29 11:49:08 2022 +1000
 
-    Merge pull request #406 from shingarov/spi-kintex
+    Merge pull request #408 from paulusmack/plru-improvement
     
-    Add support for flashing the s25fl256s onboard Genesys2
+    PLRU improvements
 
 """
 
