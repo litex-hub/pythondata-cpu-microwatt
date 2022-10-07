@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1398"
-version_tuple = (0, 0, 1398)
+version_str = "0.0.post1401"
+version_tuple = (0, 0, 1401)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1398")
+    pversion = V("0.0.post1401")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1256"
-data_version_tuple = (0, 0, 1256)
+data_version_str = "0.0.post1259"
+data_version_tuple = (0, 0, 1259)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1256")
+    pdata_version = V("0.0.post1259")
 except ImportError:
     pass
-data_git_hash = "84a0fba25de23cc7bdd1e20918c4615a2a2e00cb"
-data_git_describe = "v0.0-1256-g84a0fba"
+data_git_hash = "413f2dc5d6094be1ae14fb0c1b0cf19cb08bda25"
+data_git_describe = "v0.0-1259-g413f2dc"
 data_git_msg = """\
-commit 84a0fba25de23cc7bdd1e20918c4615a2a2e00cb
-Merge: 5766dba b8f9c83
-Author: Michael Neuling <mikey@neuling.org>
-Date:   Thu Sep 29 11:49:08 2022 +1000
+commit 413f2dc5d6094be1ae14fb0c1b0cf19cb08bda25
+Merge: 84a0fba 76f61ef
+Author: Paul Mackerras <paulus@ozlabs.org>
+Date:   Fri Oct 7 18:27:13 2022 +1100
 
-    Merge pull request #408 from paulusmack/plru-improvement
+    Merge pull request #411 from ozbenh/dcache-plru-update-fix
     
-    PLRU improvements
+    Dcache PLRU update fix
 
 """
 
