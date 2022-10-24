@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1403"
-version_tuple = (0, 0, 1403)
+version_str = "0.0.post1407"
+version_tuple = (0, 0, 1407)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1403")
+    pversion = V("0.0.post1407")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1261"
-data_version_tuple = (0, 0, 1261)
+data_version_str = "0.0.post1265"
+data_version_tuple = (0, 0, 1265)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1261")
+    pdata_version = V("0.0.post1265")
 except ImportError:
     pass
-data_git_hash = "432d9f31500e973d44ce8f261c2a82248ad24e24"
-data_git_describe = "v0.0-1261-g432d9f3"
+data_git_hash = "964b97e85cd60cdac29553cd308854a505f0404b"
+data_git_describe = "v0.0-1265-g964b97e"
 data_git_msg = """\
-commit 432d9f31500e973d44ce8f261c2a82248ad24e24
-Merge: 413f2dc 3f788e8
+commit 964b97e85cd60cdac29553cd308854a505f0404b
+Merge: 432d9f3 6068b63
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Mon Oct 24 15:02:33 2022 +1100
+Date:   Tue Oct 25 09:02:08 2022 +1100
 
-    Merge pull request #413 from ozbenh/fix-io-bridge-qw-store
+    Merge pull request #414 from ozbenh/misc
     
-    soc: Fix issues with 64-bit stores to IO bridge
+    Fixup plru_tb to use the new plrufn, take out the old plru and vunit test misc changes
 
 """
 
