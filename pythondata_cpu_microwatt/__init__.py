@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1401"
-version_tuple = (0, 0, 1401)
+version_str = "0.0.post1403"
+version_tuple = (0, 0, 1403)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1401")
+    pversion = V("0.0.post1403")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1259"
-data_version_tuple = (0, 0, 1259)
+data_version_str = "0.0.post1261"
+data_version_tuple = (0, 0, 1261)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1259")
+    pdata_version = V("0.0.post1261")
 except ImportError:
     pass
-data_git_hash = "413f2dc5d6094be1ae14fb0c1b0cf19cb08bda25"
-data_git_describe = "v0.0-1259-g413f2dc"
+data_git_hash = "432d9f31500e973d44ce8f261c2a82248ad24e24"
+data_git_describe = "v0.0-1261-g432d9f3"
 data_git_msg = """\
-commit 413f2dc5d6094be1ae14fb0c1b0cf19cb08bda25
-Merge: 84a0fba 76f61ef
-Author: Paul Mackerras <paulus@ozlabs.org>
-Date:   Fri Oct 7 18:27:13 2022 +1100
+commit 432d9f31500e973d44ce8f261c2a82248ad24e24
+Merge: 413f2dc 3f788e8
+Author: Michael Neuling <mikey@neuling.org>
+Date:   Mon Oct 24 15:02:33 2022 +1100
 
-    Merge pull request #411 from ozbenh/dcache-plru-update-fix
+    Merge pull request #413 from ozbenh/fix-io-bridge-qw-store
     
-    Dcache PLRU update fix
+    soc: Fix issues with 64-bit stores to IO bridge
 
 """
 
