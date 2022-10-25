@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "vhdl")
 src = "https://github.com/antonblanchard/microwatt"
 
 # Module version
-version_str = "0.0.post1407"
-version_tuple = (0, 0, 1407)
+version_str = "0.0.post1409"
+version_tuple = (0, 0, 1409)
 try:
     from packaging.version import Version as V
-    pversion = V("0.0.post1407")
+    pversion = V("0.0.post1409")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "0.0.post1265"
-data_version_tuple = (0, 0, 1265)
+data_version_str = "0.0.post1267"
+data_version_tuple = (0, 0, 1267)
 try:
     from packaging.version import Version as V
-    pdata_version = V("0.0.post1265")
+    pdata_version = V("0.0.post1267")
 except ImportError:
     pass
-data_git_hash = "964b97e85cd60cdac29553cd308854a505f0404b"
-data_git_describe = "v0.0-1265-g964b97e"
+data_git_hash = "7d928200b81851c6a0ead589297b357dcdf762f2"
+data_git_describe = "v0.0-1267-g7d92820"
 data_git_msg = """\
-commit 964b97e85cd60cdac29553cd308854a505f0404b
-Merge: 432d9f3 6068b63
+commit 7d928200b81851c6a0ead589297b357dcdf762f2
+Merge: 964b97e d299ea9
 Author: Michael Neuling <mikey@neuling.org>
-Date:   Tue Oct 25 09:02:08 2022 +1100
+Date:   Tue Oct 25 10:52:34 2022 +1100
 
-    Merge pull request #414 from ozbenh/misc
+    Merge pull request #415 from ozbenh/uart16550-core
     
-    Fixup plru_tb to use the new plrufn, take out the old plru and vunit test misc changes
+    Bundle the uart16550 core file
 
 """
 
